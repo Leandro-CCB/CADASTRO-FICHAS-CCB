@@ -1,0 +1,2048 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#1a3a5c" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CCB Fichas" />
+  <title>CCB Caieiras – Fichas</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+
+  <!-- jsPDF para gerar PDF da foto -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-light: #eff6ff;
+      --accent: #7c3aed;
+      --surface: #f8fafc;
+      --white: #ffffff;
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --danger: #ef4444;
+      --danger-light: #fef2f2;
+      --success: #22c55e;
+      --success-light: #f0fdf4;
+      --warning: #f59e0b;
+      --warning-light: #fffbeb;
+      --shadow: 0 4px 20px rgba(15,23,42,0.08);
+      --shadow-sm: 0 1px 4px rgba(15,23,42,0.06);
+      --shadow-md: 0 8px 30px rgba(15,23,42,0.12);
+      --radius: 10px;
+      --radius-sm: 7px;
+      --radius-lg: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Source Sans 3', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+      overflow-x: hidden;
+      font-size: 14px;
+    }
+
+    #app { display: block; min-height: 100vh; }
+
+    /* ── HEADER ── */
+    .app-header {
+      background: var(--white);
+      color: var(--gray-800);
+      padding: 0 20px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--gray-200);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .app-header .brand { display: flex; align-items: center; gap: 8px; }
+    .brand-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .app-header .brand div h1 { font-family: 'Merriweather', serif; font-size: 13px; font-weight: 700; color: var(--gray-800); line-height: 1.2; }
+    .app-header .brand div p { font-size: 10px; color: var(--gray-400); letter-spacing: 0.3px; margin-top: 1px; }
+    .header-actions { display: flex; gap: 6px; }
+
+    .icon-btn {
+      background: var(--gray-100);
+      border: none;
+      border-radius: 8px;
+      color: var(--gray-600);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 6px 9px;
+      transition: background 0.15s, color 0.15s;
+      line-height: 1;
+    }
+    .icon-btn:hover { background: var(--primary-light); color: var(--primary); }
+    .icon-btn:active { background: var(--gray-200); }
+
+    /* ── TAB NAV ── */
+    .tab-nav {
+      display: flex;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      position: sticky;
+      top: 52px;
+      z-index: 99;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--gray-400);
+      cursor: pointer;
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      padding: 9px 6px 8px;
+      text-align: center;
+      text-transform: uppercase;
+      transition: all 0.18s;
+    }
+    .tab-btn.active { border-bottom-color: var(--primary); color: var(--primary); }
+    .tab-btn span { display: block; font-size: 16px; margin-bottom: 2px; }
+
+    .tab-content { display: none; padding: 14px 14px; }
+    .tab-content.active { display: block; }
+
+    /* ── FORM CARDS ── */
+    .form-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .form-card-header {
+      background: var(--gray-50);
+      border-bottom: 1px solid var(--gray-200);
+      color: var(--gray-700);
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      padding: 10px 14px;
+    }
+    .form-card-body { padding: 14px; }
+
+    .field { margin-bottom: 12px; }
+    .field label {
+      display: block;
+      color: var(--gray-500);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.7px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    .field input[type="text"],
+    .field input[type="number"],
+    .field input[type="tel"],
+    .field input[type="date"],
+    .field select,
+    .field textarea {
+      width: 100%;
+      background: var(--gray-50);
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      color: var(--gray-800);
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 13px;
+      padding: 8px 10px;
+      outline: none;
+      transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      background: var(--white);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+    }
+    .field textarea { min-height: 60px; resize: vertical; }
+
+    .field-row { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    .field-row-3 { display: grid; gap: 10px; grid-template-columns: 1fr 1fr 1fr; }
+
+    .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--gray-50);
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      padding: 8px 10px;
+      transition: all 0.18s;
+      user-select: none;
+    }
+    .checkbox-item:has(input:checked) { background: var(--primary-light); border-color: var(--primary); }
+    .checkbox-item input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; height: 14px; width: 14px; flex-shrink: 0; }
+    .checkbox-item span { font-size: 11px; font-weight: 600; color: var(--gray-700); line-height: 1.3; }
+
+    .radio-group { display: flex; gap: 8px; }
+    .radio-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--gray-50);
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      flex: 1;
+      justify-content: center;
+      padding: 8px 6px;
+      transition: all 0.18s;
+    }
+    .radio-item:has(input:checked) { background: var(--primary-light); border-color: var(--primary); }
+    .radio-item input { accent-color: var(--primary); }
+    .radio-item span { font-size: 12px; font-weight: 600; color: var(--gray-700); }
+
+    .photo-area {
+      border: 2px dashed var(--gray-200);
+      border-radius: var(--radius);
+      cursor: pointer;
+      min-height: 130px;
+      overflow: hidden;
+      position: relative;
+      transition: border-color 0.18s, background 0.18s;
+    }
+    .photo-area:hover { border-color: var(--primary); background: var(--primary-light); }
+    .photo-placeholder {
+      align-items: center;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      justify-content: center;
+      min-height: 130px;
+      padding: 16px;
+      text-align: center;
+    }
+    .photo-placeholder .camera-icon { font-size: 30px; opacity: 0.3; }
+    .photo-placeholder p { color: var(--gray-400); font-size: 12px; line-height: 1.4; }
+    .photo-preview { display: none; position: relative; }
+    .photo-preview img { border-radius: calc(var(--radius) - 2px); display: block; max-height: 240px; object-fit: cover; width: 100%; }
+    .photo-remove {
+      background: var(--danger);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      cursor: pointer;
+      font-size: 12px;
+      height: 26px;
+      line-height: 26px;
+      position: absolute;
+      right: 7px;
+      text-align: center;
+      top: 7px;
+      width: 26px;
+    }
+    #photo-input { display: none; }
+
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border: none;
+      border-radius: var(--radius);
+      color: var(--white);
+      cursor: pointer;
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      padding: 13px;
+      transition: opacity 0.18s, transform 0.1s, box-shadow 0.18s;
+      box-shadow: 0 2px 12px rgba(37,99,235,0.3);
+    }
+    .btn-submit:hover { box-shadow: 0 4px 16px rgba(37,99,235,0.4); }
+    .btn-submit:active { transform: scale(0.98); opacity: 0.92; }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+    .btn-secondary {
+      width: 100%;
+      background: none;
+      border: 1.5px solid var(--gray-300);
+      border-radius: var(--radius);
+      color: var(--gray-600);
+      cursor: pointer;
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 11px;
+      margin-top: 8px;
+      transition: all 0.18s;
+    }
+    .btn-secondary:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+    .btn-secondary:active { background: var(--gray-100); }
+
+    .btn-danger {
+      width: 100%;
+      background: none;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius);
+      color: var(--danger);
+      cursor: pointer;
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 11px;
+      margin-top: 8px;
+      transition: all 0.18s;
+    }
+    .btn-danger:hover { background: var(--danger-light); border-color: var(--danger); }
+
+    .spinner {
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      display: inline-block;
+      height: 15px;
+      width: 15px;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 7px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── TOAST ── */
+    .toast {
+      background: var(--gray-800);
+      border-radius: var(--radius);
+      bottom: 20px;
+      box-shadow: var(--shadow-md);
+      color: var(--white);
+      font-size: 13px;
+      font-weight: 600;
+      left: 50%;
+      opacity: 0;
+      padding: 11px 18px;
+      position: fixed;
+      transform: translate(-50%, 16px);
+      transition: all 0.25s ease;
+      z-index: 9999;
+      max-width: 85vw;
+      text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+
+    /* ── SEARCH BAR ── */
+    .search-bar {
+      background: var(--white);
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .search-bar:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+    }
+    .search-bar input {
+      background: none;
+      border: none;
+      color: var(--gray-800);
+      flex: 1;
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 13px;
+      outline: none;
+    }
+    .search-bar input::placeholder { color: var(--gray-400); }
+    .search-bar .search-icon { color: var(--gray-400); font-size: 15px; }
+
+    /* ── FICHA LIST ── */
+    .ficha-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .ficha-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      border: 1px solid var(--gray-200);
+      cursor: pointer;
+      overflow: hidden;
+      transition: box-shadow 0.18s, border-color 0.18s, transform 0.1s;
+    }
+    .ficha-card:hover { box-shadow: var(--shadow); border-color: var(--gray-300); }
+    .ficha-card:active { transform: scale(0.99); }
+    .ficha-card-inner { display: flex; align-items: center; gap: 12px; padding: 11px 14px; }
+    .ficha-avatar {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      border-radius: 50%;
+      color: var(--white);
+      flex-shrink: 0;
+      font-family: 'Merriweather', serif;
+      font-size: 14px;
+      font-weight: 700;
+      height: 38px;
+      line-height: 38px;
+      text-align: center;
+      width: 38px;
+    }
+    .ficha-info { flex: 1; min-width: 0; }
+    .ficha-info h3 {
+      color: var(--gray-800);
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ficha-info p { color: var(--gray-400); font-size: 11px; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ficha-badge {
+      background: var(--gray-100);
+      border-radius: 5px;
+      color: var(--gray-500);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      padding: 3px 7px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    .ficha-badge.inclusao { background: var(--success-light); color: #16a34a; }
+    .ficha-badge.exclusao { background: var(--danger-light); color: var(--danger); }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--gray-400); }
+    .empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; opacity: 0.6; }
+    .empty-state p { font-size: 13px; line-height: 1.5; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      background: rgba(15,23,42,0.5);
+      bottom: 0;
+      display: none;
+      left: 0;
+      position: fixed;
+      right: 0;
+      top: 0;
+      z-index: 500;
+      align-items: flex-end;
+      backdrop-filter: blur(2px);
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-sheet {
+      background: var(--white);
+      border-radius: 18px 18px 0 0;
+      max-height: 90vh;
+      overflow-y: auto;
+      width: 100%;
+      animation: slideUp 0.28s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle { background: var(--gray-200); border-radius: 2px; height: 4px; margin: 10px auto 0; width: 36px; }
+    .modal-header { align-items: center; display: flex; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--gray-100); }
+    .modal-header h2 { font-family: 'Merriweather', serif; font-size: 15px; color: var(--gray-800); }
+    .modal-close { background: none; border: none; color: var(--gray-400); cursor: pointer; font-size: 20px; line-height: 1; padding: 4px; border-radius: 6px; }
+    .modal-close:hover { background: var(--gray-100); color: var(--gray-600); }
+    .modal-body { padding: 16px 18px; }
+
+    .modal-photo { width: 100%; max-height: 220px; object-fit: cover; border-radius: var(--radius); margin-bottom: 4px; cursor: zoom-in; }
+    .detail-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+    .detail-tag { background: var(--primary-light); color: var(--primary); font-size: 11px; font-weight: 600; border-radius: 5px; padding: 3px 8px; }
+
+    .detail-row { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--gray-100); }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { color: var(--gray-400); font-size: 10px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; }
+    .detail-value { color: var(--gray-800); font-size: 13px; }
+
+    /* Config section title */
+    .config-section-title {
+      color: var(--gray-600);
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 2px solid var(--primary);
+      display: inline-block;
+    }
+    .config-info { background: var(--white); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); }
+    .config-info p { font-size: 12px; color: var(--gray-500); line-height: 1.6; }
+    .config-info strong { color: var(--gray-800); }
+
+    /* Crop Editor */
+    .crop-overlay {
+      display: none; position: fixed; inset: 0;
+      background: #000; z-index: 9997;
+      flex-direction: column; align-items: center;
+    }
+    .crop-overlay.show { display: flex; }
+    .crop-topbar {
+      width: 100%; background: rgba(0,0,0,0.9);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; flex-shrink: 0;
+    }
+    .crop-topbar span { color: white; font-size: 14px; font-weight: 700; }
+    .crop-topbar button { background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 20px; }
+    .crop-viewport {
+      flex: 1; width: 100%; overflow: hidden; position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #crop-canvas { display: block; max-width: 100vw; max-height: calc(100vh - 170px); }
+    .crop-box {
+      position: absolute; border: 2px solid #fff;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+      cursor: move; touch-action: none; box-sizing: border-box;
+    }
+    .crop-box::before {
+      content: ''; position: absolute;
+      left: 33.33%; right: 33.33%; top: 0; bottom: 0;
+      border-left: 1px solid rgba(255,255,255,0.35);
+      border-right: 1px solid rgba(255,255,255,0.35);
+    }
+    .crop-box::after {
+      content: ''; position: absolute;
+      top: 33.33%; bottom: 33.33%; left: 0; right: 0;
+      border-top: 1px solid rgba(255,255,255,0.35);
+      border-bottom: 1px solid rgba(255,255,255,0.35);
+    }
+    .crop-handle { position: absolute; width: 22px; height: 22px; border-color: #fff; border-style: solid; touch-action: none; }
+    .crop-handle.tl { top:-2px; left:-2px; border-width:3px 0 0 3px; cursor:nw-resize; }
+    .crop-handle.tr { top:-2px; right:-2px; border-width:3px 3px 0 0; cursor:ne-resize; }
+    .crop-handle.bl { bottom:-2px; left:-2px; border-width:0 0 3px 3px; cursor:sw-resize; }
+    .crop-handle.br { bottom:-2px; right:-2px; border-width:0 3px 3px 0; cursor:se-resize; }
+    .crop-bottombar {
+      width: 100%; background: rgba(0,0,0,0.9);
+      padding: 10px 14px; display: flex; gap: 8px; flex-shrink: 0;
+    }
+    .crop-btn {
+      flex: 1; border: none; border-radius: 8px; cursor: pointer;
+      font-family: 'Source Sans 3', sans-serif; font-size: 13px;
+      font-weight: 700; padding: 11px 8px;
+    }
+    .crop-btn.rotate-l, .crop-btn.rotate-r { background: rgba(255,255,255,0.12); color: white; font-size: 18px; flex: 0 0 46px; }
+    .crop-btn.cancel { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
+    .crop-btn.confirm { background: var(--primary); color: white; }
+
+    .lightbox {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.92); z-index: 9998;
+      align-items: center; justify-content: center; cursor: zoom-out;
+    }
+    .lightbox.show { display: flex; }
+    .lightbox img { max-width: 95vw; max-height: 95vh; object-fit: contain; border-radius: 8px; }
+    .lightbox-close { position: absolute; top: 14px; right: 18px; background: none; border: none; color: white; font-size: 28px; cursor: pointer; line-height: 1; opacity: 0.7; }
+    .lightbox-close:hover { opacity: 1; }
+
+    /* Loader */
+    #loader {
+      position: fixed; inset: 0;
+      background: linear-gradient(160deg, var(--primary-dark) 0%, #0f172a 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 9999; transition: opacity 0.4s;
+    }
+    #loader p { color: rgba(255,255,255,0.5); font-size: 12px; }
+    .loader-bar { width: 100px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 14px; overflow: hidden; }
+    .loader-bar-fill { height: 100%; width: 40%; background: var(--primary); border-radius: 2px; animation: loading 1.2s ease-in-out infinite; }
+    @keyframes loading { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
+
+    /* Resumo */
+    .resumo-header { background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; color: var(--white); text-align: center; }
+    .resumo-header .resumo-total { font-size: 40px; font-family: 'Merriweather', serif; font-weight: 700; color: white; line-height: 1; }
+    .resumo-header .resumo-label { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 3px; letter-spacing: 0.3px; }
+    .resumo-mini-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .resumo-mini-card { background: var(--white); border-radius: var(--radius-sm); border: 1px solid var(--gray-200); padding: 10px 8px; text-align: center; }
+    .resumo-mini-card .mini-val { font-family: 'Merriweather', serif; font-size: 22px; font-weight: 700; line-height: 1; }
+    .resumo-mini-card .mini-val.inclusao { color: var(--success); }
+    .resumo-mini-card .mini-val.exclusao { color: var(--danger); }
+    .resumo-mini-card .mini-val.pendente { color: var(--warning); }
+    .resumo-mini-card .mini-lbl { font-size: 9px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
+    .resumo-section-title { font-family: 'Source Sans 3', sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--gray-500); margin-bottom: 8px; padding-bottom: 5px; border-bottom: 2px solid var(--primary); display: inline-block; }
+    .cargo-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .cargo-item { background: var(--white); border-radius: var(--radius-sm); border: 1px solid var(--gray-200); display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+    .cargo-icon { font-size: 18px; flex-shrink: 0; width: 28px; text-align: center; }
+    .cargo-name { flex: 1; font-size: 12px; font-weight: 600; color: var(--gray-700); }
+    .cargo-bar-wrap { flex: 2; }
+    .cargo-bar-bg { background: var(--gray-100); border-radius: 4px; height: 6px; overflow: hidden; }
+    .cargo-bar-fill { background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 4px; height: 6px; transition: width 0.6s ease; }
+    .cargo-count { font-family: 'Merriweather', serif; font-size: 14px; font-weight: 700; color: var(--primary); min-width: 22px; text-align: right; }
+    .aprovacao-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .aprovacao-item { background: var(--white); border-radius: var(--radius-sm); border: 1px solid var(--gray-200); display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+    .localidade-list { display: flex; flex-direction: column; gap: 6px; }
+    .localidade-item { background: var(--white); border-radius: var(--radius-sm); border: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; }
+    .localidade-item .loc-name { font-size: 12px; font-weight: 600; color: var(--gray-700); }
+    .localidade-badge { background: var(--primary-light); color: var(--primary); font-size: 11px; font-weight: 700; border-radius: 20px; padding: 2px 9px; }
+    .resumo-empty { text-align: center; padding: 28px 16px; color: var(--gray-400); font-size: 13px; }
+
+    .mt-8 { margin-top: 8px; }
+    .mt-12 { margin-top: 12px; }
+    .text-center { text-align: center; }
+    .text-xs { font-size: 11px; color: var(--gray-400); }
+
+    /* Status badge Supabase */
+    .fb-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 11px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 7px;
+    }
+    .fb-status-badge.ok { background: var(--success-light); color: #16a34a; }
+    .fb-status-badge.err { background: var(--danger-light); color: var(--danger); }
+
+    /* Backup / Import */
+    .backup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .btn-export {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border: none; border-radius: var(--radius); color: var(--white);
+      cursor: pointer; font-family: 'Source Sans 3', sans-serif;
+      font-size: 13px; font-weight: 700; padding: 12px 10px;
+      transition: opacity 0.18s; text-align: center;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.2);
+    }
+    .btn-export:active { opacity: 0.85; }
+    .btn-import-label {
+      display: block; background: var(--white);
+      border: 1.5px solid var(--gray-300); border-radius: var(--radius);
+      color: var(--gray-600); cursor: pointer;
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 13px; font-weight: 700; padding: 12px 10px;
+      text-align: center; transition: all 0.18s;
+    }
+    .btn-import-label:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+    .btn-import-label:active { background: var(--gray-100); }
+
+    /* Modal de progresso de importação */
+    .import-modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15,23,42,0.6); z-index: 9000;
+      align-items: center; justify-content: center; padding: 20px;
+      backdrop-filter: blur(2px);
+    }
+    .import-modal-overlay.show { display: flex; }
+    .import-modal {
+      background: var(--white); border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md); padding: 24px 20px; width: 100%; max-width: 340px;
+      text-align: center;
+    }
+    .import-modal h3 {
+      font-family: 'Merriweather', serif; font-size: 15px;
+      color: var(--gray-800); margin-bottom: 7px;
+    }
+    .import-modal p { font-size: 12px; color: var(--gray-500); margin-bottom: 16px; line-height: 1.5; }
+    .import-progress-bar {
+      background: var(--gray-100); border-radius: 4px; height: 6px;
+      overflow: hidden; margin-bottom: 8px;
+    }
+    .import-progress-fill {
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      border-radius: 4px; height: 6px; width: 0%;
+      transition: width 0.3s ease;
+    }
+    .import-progress-label { font-size: 11px; color: var(--gray-400); }
+  </style>
+</head>
+<body>
+
+<!-- Loader -->
+<div id="loader">
+  <div style="font-size:32px;margin-bottom:14px">🏛</div>
+  <p>Congregação Cristã no Brasil</p>
+  <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+</div>
+
+<!-- Main App -->
+<div id="app">
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">🏛</div>
+      <div>
+        <h1>CCB Caieiras</h1>
+        <p>Fichas de Apresentação</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="openNewFicha()" title="Nova ficha">＋</button>
+    </div>
+  </header>
+
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="tab-list"><span>📋</span>Fichas</button>
+    <button class="tab-btn" data-tab="tab-resumo"><span>📊</span>Resumo</button>
+    <button class="tab-btn" data-tab="tab-form"><span>➕</span>Nova</button>
+    <button class="tab-btn" data-tab="tab-config"><span>⚙️</span>Config</button>
+  </nav>
+
+  <!-- TAB: LIST -->
+  <div class="tab-content active" id="tab-list">
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Buscar por nome, localidade..." oninput="filterFichas()" />
+    </div>
+    <div class="ficha-list" id="ficha-list">
+      <div class="empty-state">
+        <div class="empty-icon">📂</div>
+        <p>Nenhuma ficha cadastrada ainda.<br>Toque em <strong>Nova</strong> para começar.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: FORM -->
+  <div class="tab-content" id="tab-form">
+
+    <div class="form-card">
+      <div class="form-card-header">📅 Reunião Ministerial</div>
+      <div class="form-card-body">
+        <div class="field">
+          <label>Considerado na Reunião de</label>
+          <input type="date" id="f-data-reuniao" />
+        </div>
+        <div class="field">
+          <label>Aprovado</label>
+          <div class="radio-group">
+            <label class="radio-item"><input type="radio" name="aprovado" value="SIM" id="r-sim" /><span>✅ SIM</span></label>
+            <label class="radio-item"><input type="radio" name="aprovado" value="NÃO" id="r-nao" /><span>❌ NÃO</span></label>
+            <label class="radio-item"><input type="radio" name="aprovado" value="PENDENTE" id="r-pend" checked /><span>⏳ Pendente</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <label>Tipo</label>
+          <div class="radio-group">
+            <label class="radio-item"><input type="radio" name="tipo" value="INCLUSÃO" id="t-inc" checked /><span>Inclusão</span></label>
+            <label class="radio-item"><input type="radio" name="tipo" value="EXCLUSÃO" id="t-exc" /><span>Exclusão</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-header">🏛 Cargos e Reuniões Familiares</div>
+      <div class="form-card-body">
+        <div class="field">
+          <label>Localidade</label>
+          <input type="text" id="f-localidade" list="lista-igrejas" placeholder="Selecione ou digite a localidade" autocomplete="off" />
+          <datalist id="lista-igrejas"></datalist>
+        </div>
+        <div class="field mt-8">
+          <label>Cargos / Funções</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item"><input type="checkbox" id="cb-portaria" /><span>Portaria</span></label>
+            <label class="checkbox-item"><input type="checkbox" id="cb-parte-externa" /><span>Parte Externa</span></label>
+            <label class="checkbox-item"><input type="checkbox" id="cb-auxiliar-rjm" /><span>Auxiliar de R.J.M</span></label>
+            <label class="checkbox-item"><input type="checkbox" id="cb-controle-som" /><span>Controle do Som</span></label>
+            <label class="checkbox-item"><input type="checkbox" id="cb-reuniao-evang" /><span>Reunião de Evangelização</span></label>
+            <label class="checkbox-item"><input type="checkbox" id="cb-reuniao-enfermo" /><span>Reunião para Enfermo</span></label>
+            <label class="checkbox-item"><input type="checkbox" id="cb-fundo-biblico" /><span>Fundo Bíblico / Distribuição</span></label>
+            <label class="checkbox-item"><input type="checkbox" id="cb-colaborador-admin" /><span>Colaborador(a) Administração</span></label>
+            <label class="checkbox-item"><input type="checkbox" id="cb-colaborador-piedade" /><span>Colaborador(a) da Piedade</span></label>
+            <label class="checkbox-item"><input type="checkbox" id="cb-outros" /><span>Outros</span></label>
+          </div>
+        </div>
+        <div class="field" id="field-outros-desc" style="display:none">
+          <label>Especificar "Outros"</label>
+          <input type="text" id="f-outros-desc" placeholder="Descreva o cargo/função" />
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-header">👤 Dados Pessoais</div>
+      <div class="form-card-body">
+        <div class="field">
+          <label>Nome Completo *</label>
+          <input type="text" id="f-nome" placeholder="Nome completo do irmão/irmã" />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Idade</label>
+            <input type="number" id="f-idade" placeholder="00" min="0" max="120" />
+          </div>
+          <div class="field">
+            <label>Tempo de Batismo</label>
+            <input type="text" id="f-tempo-batismo" placeholder="Ex: 5 anos" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Endereço</label>
+          <input type="text" id="f-endereco" placeholder="Rua, número, bairro..." />
+        </div>
+        <div class="field">
+          <label>Telefone</label>
+          <input type="tel" id="f-telefone" placeholder="(11) 99999-9999" />
+        </div>
+        <div class="field">
+          <label>Referências</label>
+          <input type="text" id="f-referencias" placeholder="Referências da pessoa" />
+        </div>
+        <div class="field">
+          <label>Observações</label>
+          <textarea id="f-obs" placeholder="Observações gerais..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-header">📷 Foto da Ficha Original</div>
+      <div class="form-card-body">
+        <div class="photo-area" onclick="document.getElementById('photo-input').click()">
+          <div class="photo-placeholder" id="photo-placeholder">
+            <span class="camera-icon">📷</span>
+            <p>Toque aqui para <strong>tirar foto</strong> ou <strong>selecionar</strong> a ficha original</p>
+          </div>
+          <div class="photo-preview" id="photo-preview">
+            <img id="photo-img" src="" alt="Foto da ficha" />
+            <button class="photo-remove" onclick="removePhoto(event)">✕</button>
+          </div>
+        </div>
+        <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(event)" />
+        <p class="text-xs mt-8">📁 Foto salva no Supabase Storage · 📋 Dados salvos no Supabase</p>
+      </div>
+    </div>
+
+    <button class="btn-submit" id="btn-salvar" onclick="salvarFicha()">💾 Salvar Ficha</button>
+    <button class="btn-secondary" id="btn-cancelar" onclick="cancelarFicha()">Cancelar</button>
+    <div style="height: 32px"></div>
+  </div>
+
+  <!-- TAB: RESUMO -->
+  <div class="tab-content" id="tab-resumo">
+    <div class="resumo-header">
+      <div class="resumo-total" id="r-total">0</div>
+      <div class="resumo-label">fichas cadastradas</div>
+    </div>
+    <div class="resumo-mini-stats">
+      <div class="resumo-mini-card">
+        <div class="mini-val inclusao" id="r-inclusao">0</div>
+        <div class="mini-lbl">✅ Inclusão</div>
+      </div>
+      <div class="resumo-mini-card">
+        <div class="mini-val exclusao" id="r-exclusao">0</div>
+        <div class="mini-lbl">❌ Exclusão</div>
+      </div>
+      <div class="resumo-mini-card">
+        <div class="mini-val pendente" id="r-pendente">0</div>
+        <div class="mini-lbl">⏳ Pendente</div>
+      </div>
+    </div>
+    <div id="resumo-corpo">
+      <div class="resumo-empty">Nenhuma ficha cadastrada ainda.</div>
+    </div>
+  </div>
+
+  <!-- TAB: CONFIG -->
+  <div class="tab-content" id="tab-config">
+
+    <div class="config-section">
+      <h3>🟢 Supabase (Dados + Fotos)</h3>
+      <div class="config-info">
+        <p>As fichas e fotos são salvas diretamente no <strong>Supabase</strong>.</p>
+        <div id="fb-status-badge" class="fb-status-badge err">⚠️ Aguardando conexão...</div>
+      </div>
+    </div>
+
+    <div class="config-section">
+      <h3>🏛 Localidades / Igrejas</h3>
+      <div class="config-info" style="margin-bottom:12px">
+        <p style="font-size:13px;color:var(--gray-600)">As localidades cadastradas aqui aparecem como lista no campo <strong>Localidade</strong> ao preencher uma ficha.</p>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="text" id="nova-igreja" placeholder="Nome da localidade/igreja"
+          style="flex:1;background:var(--gray-100);border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);color:var(--gray-800);font-family:'Source Sans 3',sans-serif;font-size:14px;padding:10px 12px;outline:none;"
+          onkeydown="if(event.key==='Enter') adicionarIgreja()"
+          onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--gray-200)'" />
+        <button onclick="adicionarIgreja()" style="background:var(--primary);border:none;border-radius:var(--radius-sm);color:white;cursor:pointer;font-size:20px;padding:10px 16px;flex-shrink:0">＋</button>
+      </div>
+      <div id="lista-igrejas-config"></div>
+    </div>
+
+    <div class="config-section">
+      <h3>📊 Dados</h3>
+      <div class="config-info">
+        <p>Total de fichas: <strong id="total-fichas">0</strong></p>
+        <p>Dados: <strong>🟢 Supabase</strong></p>
+        <p>Fotos: <strong id="storage-info">🟢 Supabase Storage</strong></p>
+      </div>
+    </div>
+
+    <div class="config-section">
+      <h3>💾 Backup e Importação</h3>
+      <div class="config-info" style="margin-bottom:12px">
+        <p>Exporte todas as fichas como arquivo <strong>JSON</strong> para guardar um backup. Para restaurar, importe o arquivo — <strong>todos os dados atuais no Supabase serão substituídos.</strong></p>
+      </div>
+      <div class="backup-btn-row">
+        <button class="btn-export" onclick="exportarBackup()">⬇️ Exportar JSON</button>
+        <label class="btn-import-label">
+          ⬆️ Importar JSON
+          <input type="file" id="import-input" accept=".json,application/json" style="display:none" onchange="importarBackup(event)" />
+        </label>
+      </div>
+    </div>
+
+  
+</div>
+
+<!-- Modal de Progresso de Importação -->
+<div class="import-modal-overlay" id="import-modal-overlay">
+  <div class="import-modal">
+    <h3 id="import-modal-title">⬆️ Importando fichas...</h3>
+    <p id="import-modal-desc">Aguarde enquanto os dados são enviados ao Supabase.</p>
+    <div class="import-progress-bar">
+      <div class="import-progress-fill" id="import-progress-fill"></div>
+    </div>
+    <div class="import-progress-label" id="import-progress-label">0 de 0</div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 id="modal-title">Detalhes da Ficha</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Crop Editor -->
+<div class="crop-overlay" id="crop-overlay">
+  <div class="crop-topbar">
+    <span>✂️ Enquadrar foto</span>
+    <button onclick="cancelCrop()">✕</button>
+  </div>
+  <div class="crop-viewport" id="crop-viewport">
+    <canvas id="crop-canvas"></canvas>
+    <div class="crop-box" id="crop-box">
+      <div class="crop-handle tl" data-handle="tl"></div>
+      <div class="crop-handle tr" data-handle="tr"></div>
+      <div class="crop-handle bl" data-handle="bl"></div>
+      <div class="crop-handle br" data-handle="br"></div>
+    </div>
+  </div>
+  <div class="crop-bottombar">
+    <button class="crop-btn rotate-l" onclick="rotateCrop(-90)" title="Girar esquerda">↺</button>
+    <button class="crop-btn rotate-r" onclick="rotateCrop(90)" title="Girar direita">↻</button>
+    <button class="crop-btn cancel" onclick="cancelCrop()">Cancelar</button>
+    <button class="crop-btn confirm" onclick="confirmCrop()">✅ Usar foto</button>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="Foto da ficha" onclick="event.stopPropagation()" />
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════════════════════════
+let fichas = [];
+let currentEditId = null;
+let currentPhotoFile = null;
+let currentPhotoBase64 = null;
+let sbClient = null;  // cliente Supabase (evita conflito com window.supabase)
+let realtimeChannel = null;
+
+// ══════════════════════════════════════════════
+// SUPABASE CONFIG
+// ══════════════════════════════════════════════
+const SUPABASE_URL = 'https://vfjgthdzazqtasftzeli.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_1xAN3amllIjiziqGdmhJBA_lxXHZaec';
+const STORAGE_BUCKET = 'fichas-fotos'; // nome do bucket no Supabase Storage
+
+// ══════════════════════════════════════════════
+// SUPABASE — INIT E OPERAÇÕES CRUD
+// ══════════════════════════════════════════════
+function initSupabase() {
+  try {
+    // UMD build expõe createClient diretamente em window.supabase
+    const createClient = window.supabase?.createClient || window.supabaseJs?.createClient;
+    if (!createClient) throw new Error('SDK Supabase não carregou');
+    sbClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+    setSupabaseStatus(true);
+    return true;
+  } catch(e) {
+    console.error('Supabase init error:', e);
+    setSupabaseStatus(false);
+    return false;
+  }
+}
+
+function setSupabaseStatus(ok) {
+  const badge = document.getElementById('fb-status-badge');
+  if (!badge) return;
+  if (ok) {
+    badge.className = 'fb-status-badge ok';
+    badge.textContent = '✅ Supabase conectado';
+  } else {
+    badge.className = 'fb-status-badge err';
+    badge.textContent = '❌ Erro na conexão Supabase';
+  }
+}
+
+// ── Salvar ficha no Supabase ──
+async function saveToSupabase(ficha) {
+  if (!sbClient) throw new Error('Supabase não inicializado');
+  const { error } = await sbClient.from('fichas').upsert(ficha, { onConflict: 'id' });
+  if (error) throw error;
+}
+
+// ── Carregar todas as fichas ──
+async function loadFromSupabase() {
+  if (!sbClient) throw new Error('Supabase não inicializado');
+  const { data, error } = await sbClient
+    .from('fichas')
+    .select('*')
+    .order('criadoEm', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+// ── Excluir ficha ──
+async function deleteFromSupabase(id) {
+  if (!sbClient) throw new Error('Supabase não inicializado');
+  // Tenta remover foto do storage também
+  await sbClient.storage.from(STORAGE_BUCKET).remove([`${id}.jpg`]).catch(() => {});
+  const { error } = await sbClient.from('fichas').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ── Converte imagem para PDF comprimido (menor tamanho possível) ──
+async function imageToPdfBlob(file) {
+  return new Promise((resolve, reject) => {
+    // Primeiro comprime a imagem ao máximo
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // Reduz para no máximo 900px e qualidade 0.55 para menor tamanho
+        const maxDim = 900;
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const jpegData = canvas.toDataURL('image/jpeg', 0.55); // qualidade baixa = arquivo menor
+
+        try {
+          const { jsPDF } = window.jspdf;
+          // Orientação baseada na proporção da imagem
+          const orientation = w >= h ? 'landscape' : 'portrait';
+          // Converte pixels para mm (72 dpi -> 25.4mm/inch)
+          const mmW = (w / 96) * 25.4;
+          const mmH = (h / 96) * 25.4;
+          const pdf = new jsPDF({ orientation, unit: 'mm', format: [mmW, mmH], compress: true });
+          pdf.addImage(jpegData, 'JPEG', 0, 0, mmW, mmH, undefined, 'FAST');
+          const pdfBlob = pdf.output('blob');
+          resolve(pdfBlob);
+        } catch(err) {
+          reject(err);
+        }
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Upload de foto como PDF no Supabase Storage ──
+async function uploadPhotoSupabase(file, fichaId) {
+  if (!sbClient) return null;
+  try {
+    // Remove arquivo anterior (jpg ou pdf) para evitar duplicatas
+    await sbClient.storage.from(STORAGE_BUCKET).remove([`${fichaId}.jpg`, `${fichaId}.pdf`]).catch(() => {});
+
+    // Gera PDF comprimido a partir da foto
+    const pdfBlob = await imageToPdfBlob(file);
+    const filename = `${fichaId}.pdf`;
+
+    const { error } = await sbClient.storage
+      .from(STORAGE_BUCKET)
+      .upload(filename, pdfBlob, { contentType: 'application/pdf', upsert: true });
+    if (error) throw error;
+
+    const { data } = sbClient.storage.from(STORAGE_BUCKET).getPublicUrl(filename);
+    return data.publicUrl || null;
+  } catch(e) {
+    console.error('Supabase Storage upload error:', e);
+    return null;
+  }
+}
+
+// ── Sincronizar em tempo real (Realtime) ──
+function setupRealtimeListener() {
+  if (!sbClient) return;
+  try {
+    if (realtimeChannel) sbClient.removeChannel(realtimeChannel);
+    realtimeChannel = sbClient
+      .channel('fichas-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fichas' }, async () => {
+        const data = await loadFromSupabase();
+        fichas = data;
+        saveLocal();
+        renderFichas();
+        updateStats();
+      })
+      .subscribe();
+  } catch(e) {
+    console.warn('Realtime não disponível (modo local):', e.message);
+  }
+}
+
+// ══════════════════════════════════════════════
+// LOCAL STORAGE — apenas backup
+// ══════════════════════════════════════════════
+function saveLocal() {
+  try { localStorage.setItem('ccb_fichas_backup', JSON.stringify(fichas)); } catch(e) {}
+}
+
+function loadLocal() {
+  try {
+    const saved = localStorage.getItem('ccb_fichas_backup');
+    fichas = saved ? JSON.parse(saved) : [];
+  } catch(e) { fichas = []; }
+}
+
+// ══════════════════════════════════════════════
+// IGREJAS / LOCALIDADES
+// ══════════════════════════════════════════════
+let igrejas = [];
+
+function loadIgrejas() {
+  try {
+    const saved = localStorage.getItem('ccb_igrejas');
+    igrejas = saved ? JSON.parse(saved) : [];
+  } catch(e) { igrejas = []; }
+}
+
+function saveIgrejas() {
+  try { localStorage.setItem('ccb_igrejas', JSON.stringify(igrejas)); } catch(e) {}
+}
+
+function adicionarIgreja() {
+  const input = document.getElementById('nova-igreja');
+  const nome = input.value.trim();
+  if (!nome) { showToast('Digite o nome da localidade', 'error'); return; }
+  if (igrejas.includes(nome)) { showToast('Localidade já cadastrada', 'error'); return; }
+  igrejas.push(nome);
+  igrejas.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  saveIgrejas();
+  input.value = '';
+  renderIgrejas();
+  atualizarDatalistIgrejas();
+  showToast('✅ Localidade adicionada!', 'success');
+}
+
+function removerIgreja(nome) {
+  igrejas = igrejas.filter(i => i !== nome);
+  saveIgrejas();
+  renderIgrejas();
+  atualizarDatalistIgrejas();
+  showToast('🗑 Localidade removida', 'error');
+}
+
+function renderIgrejas() {
+  const container = document.getElementById('lista-igrejas-config');
+  if (!container) return;
+  if (igrejas.length === 0) {
+    container.innerHTML = '<p style="font-size:13px;color:var(--gray-400);text-align:center;padding:12px">Nenhuma localidade cadastrada ainda.</p>';
+    return;
+  }
+  container.innerHTML = igrejas.map(nome => `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--white);border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px">
+      <span style="font-size:14px;font-weight:600;color:var(--primary)">🏠 ${nome}</span>
+      <button onclick="removerIgreja(decodeURIComponent('${encodeURIComponent(nome)}'))" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px">✕</button>
+    </div>
+  `).join('');
+}
+
+function atualizarDatalistIgrejas() {
+  const dl = document.getElementById('lista-igrejas');
+  if (!dl) return;
+  dl.innerHTML = igrejas.map(nome => `<option value="${nome}"></option>`).join('');
+}
+
+// ══════════════════════════════════════════════
+// COMPRESSÃO DE IMAGEM (utilitário)
+// ══════════════════════════════════════════════
+
+function compressImage(file, maxWidth, quality) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(resolve, 'image/jpeg', quality);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ══════════════════════════════════════════════
+// FORMULÁRIO
+// ══════════════════════════════════════════════
+document.getElementById('cb-outros').addEventListener('change', e => {
+  document.getElementById('field-outros-desc').style.display = e.target.checked ? 'block' : 'none';
+});
+
+function openNewFicha() {
+  currentEditId = null;
+  resetForm();
+  switchTab('tab-form');
+}
+
+function cancelarFicha() {
+  resetForm();
+  switchTab('tab-list');
+}
+
+function resetForm() {
+  document.getElementById('f-data-reuniao').value = '';
+  document.getElementById('r-pend').checked = true;
+  document.getElementById('t-inc').checked = true;
+  document.getElementById('f-localidade').value = '';
+  document.getElementById('f-nome').value = '';
+  document.getElementById('f-idade').value = '';
+  document.getElementById('f-tempo-batismo').value = '';
+  document.getElementById('f-endereco').value = '';
+  document.getElementById('f-telefone').value = '';
+  document.getElementById('f-referencias').value = '';
+  document.getElementById('f-obs').value = '';
+  document.getElementById('f-outros-desc').value = '';
+  document.getElementById('field-outros-desc').style.display = 'none';
+  const cbs = ['portaria','parte-externa','auxiliar-rjm','controle-som','reuniao-evang',
+    'reuniao-enfermo','fundo-biblico','colaborador-admin','colaborador-piedade','outros'];
+  cbs.forEach(id => { const el = document.getElementById('cb-'+id); if(el) el.checked = false; });
+  removePhoto(null);
+  currentEditId = null;
+}
+
+function getFormData() {
+  const cbs = ['portaria','parte-externa','auxiliar-rjm','controle-som','reuniao-evang',
+    'reuniao-enfermo','fundo-biblico','colaborador-admin','colaborador-piedade','outros'];
+  const cargos = cbs.filter(id => {
+    const el = document.getElementById('cb-'+id);
+    return el && el.checked;
+  }).map(id => id.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()));
+
+  return {
+    dataReuniao: document.getElementById('f-data-reuniao').value,
+    aprovado: document.querySelector('input[name="aprovado"]:checked')?.value || 'PENDENTE',
+    tipo: document.querySelector('input[name="tipo"]:checked')?.value || 'INCLUSÃO',
+    localidade: document.getElementById('f-localidade').value.trim(),
+    nome: document.getElementById('f-nome').value.trim(),
+    idade: document.getElementById('f-idade').value,
+    tempoBatismo: document.getElementById('f-tempo-batismo').value.trim(),
+    endereco: document.getElementById('f-endereco').value.trim(),
+    telefone: document.getElementById('f-telefone').value.trim(),
+    referencias: document.getElementById('f-referencias').value.trim(),
+    obs: document.getElementById('f-obs').value.trim(),
+    outrosDesc: document.getElementById('f-outros-desc').value.trim(),
+    cargos,
+    photoBase64: currentPhotoBase64 || null,
+    photoURL: null,
+    criadoEm: currentEditId
+      ? (fichas.find(f => f.id === currentEditId)?.criadoEm || new Date().toISOString())
+      : new Date().toISOString(),
+  };
+}
+
+async function salvarFicha() {
+  const data = getFormData();
+  if (!data.nome) { showToast('Informe o nome da pessoa', 'error'); return; }
+  if (!sbClient) { showToast('Supabase não conectado. Recarregue a página.', 'error'); return; }
+
+  const btn = document.getElementById('btn-salvar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Salvando...';
+
+  try {
+    const id = currentEditId || 'ficha_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+    data.id = id;
+
+    // 1. Tenta fazer upload da foto no Supabase Storage (como PDF comprimido)
+    if (currentPhotoFile) {
+      btn.innerHTML = '<span class="spinner"></span>Gerando PDF da foto...';
+      const url = await uploadPhotoSupabase(currentPhotoFile, id);
+      if (url) {
+        data.photoURL = url;
+        data.photoBase64 = null; // não salva base64 se tem URL
+        data.photoIsPdf = true;  // marca que o arquivo é um PDF
+      } else {
+        showToast('⚠️ Falha no upload da foto. Foto salva localmente.', '');
+      }
+    }
+
+    // 2. Salva todos os dados da ficha no Supabase
+    btn.innerHTML = '<span class="spinner"></span>Salvando ficha...';
+    await saveToSupabase(data);
+
+    resetForm();
+    switchTab('tab-list');
+    showToast('✅ Ficha salva no Supabase!', 'success');
+  } catch(e) {
+    console.error('Erro ao salvar:', e);
+    showToast('Erro ao salvar: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '💾 Salvar Ficha';
+}
+
+// ══════════════════════════════════════════════
+// CROP EDITOR
+// ══════════════════════════════════════════════
+let cropRotation = 0;
+let cropOrigImg = null;
+let cropBox = { x:0, y:0, w:0, h:0 };
+const MIN_CROP = 40;
+
+function handlePhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  currentPhotoFile = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => { cropOrigImg = img; cropRotation = 0; cropBox = {x:0,y:0,w:0,h:0}; openCropEditor(); };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function openCropEditor() {
+  document.getElementById('crop-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  setTimeout(drawCropCanvas, 60);
+}
+
+function drawCropCanvas() {
+  const canvas = document.getElementById('crop-canvas');
+  const viewport = document.getElementById('crop-viewport');
+  const img = cropOrigImg;
+  if (!img) return;
+  const rad = cropRotation * Math.PI / 180;
+  const rW = Math.abs(img.width*Math.cos(rad)) + Math.abs(img.height*Math.sin(rad));
+  const rH = Math.abs(img.width*Math.sin(rad)) + Math.abs(img.height*Math.cos(rad));
+  const maxW = viewport.clientWidth - 4;
+  const maxH = viewport.clientHeight - 4;
+  const sc = Math.min(maxW/rW, maxH/rH, 1);
+  canvas.width  = Math.round(rW * sc);
+  canvas.height = Math.round(rH * sc);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(canvas.width/2, canvas.height/2);
+  ctx.rotate(rad);
+  ctx.drawImage(img, -img.width*sc/2, -img.height*sc/2, img.width*sc, img.height*sc);
+  ctx.restore();
+  if (!cropBox.w) {
+    const p = 0.08;
+    cropBox = { x: canvas.width*p, y: canvas.height*p, w: canvas.width*(1-p*2), h: canvas.height*(1-p*2) };
+  } else {
+    cropBox.x = Math.max(0, Math.min(cropBox.x, canvas.width - MIN_CROP));
+    cropBox.y = Math.max(0, Math.min(cropBox.y, canvas.height - MIN_CROP));
+    cropBox.w = Math.max(MIN_CROP, Math.min(cropBox.w, canvas.width - cropBox.x));
+    cropBox.h = Math.max(MIN_CROP, Math.min(cropBox.h, canvas.height - cropBox.y));
+  }
+  updateCropBoxUI();
+}
+
+function updateCropBoxUI() {
+  const canvas = document.getElementById('crop-canvas');
+  const box    = document.getElementById('crop-box');
+  const vr = document.getElementById('crop-viewport').getBoundingClientRect();
+  const cr = canvas.getBoundingClientRect();
+  box.style.left   = (cr.left - vr.left + cropBox.x) + 'px';
+  box.style.top    = (cr.top  - vr.top  + cropBox.y) + 'px';
+  box.style.width  = cropBox.w + 'px';
+  box.style.height = cropBox.h + 'px';
+}
+
+function rotateCrop(deg) {
+  cropRotation = (cropRotation + deg + 360) % 360;
+  cropBox = {x:0,y:0,w:0,h:0};
+  drawCropCanvas();
+}
+
+function cancelCrop() {
+  document.getElementById('crop-overlay').classList.remove('show');
+  document.body.style.overflow = '';
+  cropBox = {x:0,y:0,w:0,h:0};
+  cropRotation = 0;
+  currentPhotoFile = null;
+  cropOrigImg = null;
+}
+
+function confirmCrop() {
+  const canvas = document.getElementById('crop-canvas');
+  const img = cropOrigImg;
+  if (!img) return;
+  const rad = cropRotation * Math.PI / 180;
+  const rW = Math.abs(img.width*Math.cos(rad)) + Math.abs(img.height*Math.sin(rad));
+  const sc = canvas.width / rW;
+  const rH = Math.abs(img.width*Math.sin(rad)) + Math.abs(img.height*Math.cos(rad));
+  const full = document.createElement('canvas');
+  full.width = Math.round(rW); full.height = Math.round(rH);
+  const fc = full.getContext('2d');
+  fc.save(); fc.translate(full.width/2, full.height/2); fc.rotate(rad);
+  fc.drawImage(img, -img.width/2, -img.height/2); fc.restore();
+  const cx = cropBox.x/sc, cy = cropBox.y/sc, cw = cropBox.w/sc, ch = cropBox.h/sc;
+  const out = document.createElement('canvas');
+  const maxOut = 1200;
+  const os = Math.min(maxOut/cw, maxOut/ch, 1);
+  out.width = Math.round(cw*os); out.height = Math.round(ch*os);
+  out.getContext('2d').drawImage(full, cx, cy, cw, ch, 0, 0, out.width, out.height);
+  const result = out.toDataURL('image/jpeg', 0.85);
+  currentPhotoBase64 = result;
+  out.toBlob(blob => { currentPhotoFile = blob; }, 'image/jpeg', 0.85);
+  document.getElementById('photo-img').src = result;
+  document.getElementById('photo-placeholder').style.display = 'none';
+  document.getElementById('photo-preview').style.display = 'block';
+  document.getElementById('crop-overlay').classList.remove('show');
+  document.body.style.overflow = '';
+  cropBox = {x:0,y:0,w:0,h:0};
+}
+
+// Drag & resize crop box
+(function() {
+  let active = null, startPos = null, startBox = null;
+  function pos(e) { const t = e.touches?e.touches[0]:e; return {x:t.clientX,y:t.clientY}; }
+  function clamp(v,a,b) { return Math.max(a,Math.min(b,v)); }
+
+  function onStart(e) {
+    const canvas = document.getElementById('crop-canvas');
+    if (!canvas.width) return;
+    e.preventDefault();
+    startPos = pos(e);
+    startBox = {...cropBox};
+    active = (e.target.dataset&&e.target.dataset.handle) ? e.target.dataset.handle
+           : (e.target.id==='crop-box' ? 'move' : null);
+  }
+
+  function onMove(e) {
+    if (!active) return;
+    e.preventDefault();
+    const canvas = document.getElementById('crop-canvas');
+    const p = pos(e);
+    const dx = p.x - startPos.x, dy = p.y - startPos.y;
+    const cw = canvas.width, ch = canvas.height;
+    let {x,y,w,h} = startBox;
+    if (active === 'move') {
+      x = clamp(x+dx, 0, cw-w); y = clamp(y+dy, 0, ch-h);
+    } else if (active === 'br') {
+      w = clamp(w+dx, MIN_CROP, cw-x); h = clamp(h+dy, MIN_CROP, ch-y);
+    } else if (active === 'bl') {
+      const nx = clamp(x+dx, 0, x+w-MIN_CROP);
+      w = w+(x-nx); x = nx; h = clamp(h+dy, MIN_CROP, ch-y);
+    } else if (active === 'tr') {
+      w = clamp(w+dx, MIN_CROP, cw-x);
+      const ny = clamp(y+dy, 0, y+h-MIN_CROP);
+      h = h+(y-ny); y = ny;
+    } else if (active === 'tl') {
+      const nx = clamp(x+dx, 0, x+w-MIN_CROP);
+      const ny = clamp(y+dy, 0, y+h-MIN_CROP);
+      w = w+(x-nx); h = h+(y-ny); x = nx; y = ny;
+    }
+    cropBox = {x,y,w,h};
+    updateCropBoxUI();
+  }
+
+  function onEnd() { active = null; }
+
+  const cropEl = document.getElementById('crop-box');
+  cropEl.addEventListener('mousedown', onStart);
+  cropEl.addEventListener('touchstart', onStart, {passive:false});
+  cropEl.querySelectorAll('.crop-handle').forEach(h => {
+    h.addEventListener('mousedown', onStart);
+    h.addEventListener('touchstart', onStart, {passive:false});
+  });
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, {passive:false});
+  document.addEventListener('mouseup', onEnd);
+  document.addEventListener('touchend', onEnd);
+
+  window.addEventListener('resize', () => {
+    if (document.getElementById('crop-overlay').classList.contains('show')) drawCropCanvas();
+  });
+})();
+
+function removePhoto(e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  currentPhotoFile = null;
+  currentPhotoBase64 = null;
+  document.getElementById('photo-img').src = '';
+  document.getElementById('photo-placeholder').style.display = 'flex';
+  document.getElementById('photo-preview').style.display = 'none';
+}
+
+// ══════════════════════════════════════════════
+// LISTA DE FICHAS
+// ══════════════════════════════════════════════
+function renderFichas(list) {
+  const data = list || fichas;
+  const container = document.getElementById('ficha-list');
+  if (data.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📂</div><p>Nenhuma ficha encontrada.</p></div>`;
+    return;
+  }
+  container.innerHTML = data.map(f => `
+    <div class="ficha-card" onclick="openDetail('${f.id}')">
+      <div class="ficha-card-inner">
+        <div class="ficha-avatar">${(f.nome||'?').charAt(0).toUpperCase()}</div>
+        <div class="ficha-info">
+          <h3>${f.nome || 'Sem nome'}</h3>
+          <p>${f.localidade || 'Localidade não informada'} • ${f.cargos?.length ? f.cargos.slice(0,2).join(', ') : 'Sem cargo'}</p>
+        </div>
+        <span class="ficha-badge ${f.tipo==='INCLUSÃO'?'inclusao':'exclusao'}">${f.tipo||'—'}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterFichas() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  if (!q) { renderFichas(); return; }
+  const filtered = fichas.filter(f =>
+    (f.nome||'').toLowerCase().includes(q) ||
+    (f.localidade||'').toLowerCase().includes(q) ||
+    (f.cargos||[]).join(' ').toLowerCase().includes(q)
+  );
+  renderFichas(filtered);
+}
+
+// ══════════════════════════════════════════════
+// MODAL DE DETALHE
+// ══════════════════════════════════════════════
+function openDetail(id) {
+  const f = fichas.find(x => x.id === id);
+  if (!f) return;
+  document.getElementById('modal-title').textContent = f.nome || 'Ficha';
+  const photoHTML = f.photoURL
+    ? (f.photoIsPdf
+        ? `<div style="display:flex;align-items:center;gap:10px;background:#f0f4ff;border:1.5px solid var(--primary);border-radius:var(--radius-sm);padding:12px 16px">
+            <span style="font-size:24px">📄</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--primary)">Foto salva como PDF</div>
+              <a href="${f.photoURL}" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">🔗 Abrir / Baixar PDF</a>
+            </div>
+           </div>`
+        : `<img src="${f.photoURL}" class="modal-photo" alt="Foto da ficha" onclick="openLightbox('${f.photoURL}')" onerror="this.outerHTML='<a href=\\'${f.photoURL}\\' target=\\'_blank\\' style=\\'color:var(--primary);font-weight:600;font-size:13px\\'>🔗 Abrir foto</a>'" />`)
+    : f.photoBase64
+    ? `<img src="${f.photoBase64}" class="modal-photo" alt="Foto da ficha" onclick="openLightbox('${f.photoBase64}')" />`
+    : '<p style="color:var(--gray-400);font-size:13px">Sem foto</p>';
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="detail-row">
+      <span class="detail-label">Nome</span>
+      <span class="detail-value">${f.nome || '—'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Tipo</span>
+      <span class="ficha-badge ${f.tipo==='INCLUSÃO'?'inclusao':'exclusao'}">${f.tipo || '—'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Aprovado</span>
+      <span class="detail-value">${f.aprovado || '—'}</span>
+    </div>
+    ${f.dataReuniao ? `<div class="detail-row"><span class="detail-label">Reunião Ministerial</span><span class="detail-value">${formatDate(f.dataReuniao)}</span></div>` : ''}
+    <div class="detail-row">
+      <span class="detail-label">Localidade</span>
+      <span class="detail-value">${f.localidade || '—'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Idade / Batismo</span>
+      <span class="detail-value">${f.idade ? f.idade + ' anos' : '—'} / ${f.tempoBatismo || '—'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Endereço</span>
+      <span class="detail-value">${f.endereco || '—'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Telefone</span>
+      <span class="detail-value">${f.telefone || '—'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Referências</span>
+      <span class="detail-value">${f.referencias || '—'}</span>
+    </div>
+    ${f.cargos?.length ? `
+    <div class="detail-row">
+      <span class="detail-label">Cargos / Funções</span>
+      <div class="detail-tags">${f.cargos.map(c=>`<span class="detail-tag">${c}</span>`).join('')}</div>
+    </div>` : ''}
+    ${f.outrosDesc ? `<div class="detail-row"><span class="detail-label">Outros</span><span class="detail-value">${f.outrosDesc}</span></div>` : ''}
+    ${f.obs ? `<div class="detail-row"><span class="detail-label">Obs</span><span class="detail-value">${f.obs}</span></div>` : ''}
+    <div class="detail-row">
+      <span class="detail-label">Foto da Ficha</span>
+      ${photoHTML}
+    </div>
+    <button class="btn-secondary" onclick="editFicha('${f.id}')">✏️ Editar</button>
+    <button class="btn-danger" onclick="deleteFicha('${f.id}')">🗑 Excluir</button>
+    <div style="height:16px"></div>
+  `;
+  document.getElementById('modal-detail').classList.add('show');
+}
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('show');
+  document.getElementById('lightbox-img').src = '';
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+function closeModal() {
+  document.getElementById('modal-detail').classList.remove('show');
+}
+
+document.getElementById('modal-detail').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-detail')) closeModal();
+});
+
+function editFicha(id) {
+  const f = fichas.find(x => x.id === id);
+  if (!f) return;
+  closeModal();
+  currentEditId = id;
+
+  document.getElementById('f-data-reuniao').value = f.dataReuniao || '';
+  const r = document.querySelector(`input[name="aprovado"][value="${f.aprovado}"]`);
+  if (r) r.checked = true;
+  const t = document.querySelector(`input[name="tipo"][value="${f.tipo}"]`);
+  if (t) t.checked = true;
+  document.getElementById('f-localidade').value = f.localidade || '';
+  document.getElementById('f-nome').value = f.nome || '';
+  document.getElementById('f-idade').value = f.idade || '';
+  document.getElementById('f-tempo-batismo').value = f.tempoBatismo || '';
+  document.getElementById('f-endereco').value = f.endereco || '';
+  document.getElementById('f-telefone').value = f.telefone || '';
+  document.getElementById('f-referencias').value = f.referencias || '';
+  document.getElementById('f-obs').value = f.obs || '';
+  document.getElementById('f-outros-desc').value = f.outrosDesc || '';
+
+  const map = {
+    'Portaria': 'cb-portaria', 'Parte Externa': 'cb-parte-externa',
+    'Auxiliar De R.J.M': 'cb-auxiliar-rjm', 'Controle Do Som': 'cb-controle-som',
+    'Reuniao Evang': 'cb-reuniao-evang', 'Reuniao Enfermo': 'cb-reuniao-enfermo',
+    'Fundo Biblico': 'cb-fundo-biblico', 'Colaborador Admin': 'cb-colaborador-admin',
+    'Colaborador Piedade': 'cb-colaborador-piedade', 'Outros': 'cb-outros'
+  };
+  (f.cargos || []).forEach(c => {
+    const key = Object.keys(map).find(k => k.toLowerCase() === c.toLowerCase().replace(/\(a\)/g,'').trim());
+    if (key) { const el = document.getElementById(map[key]); if(el) el.checked = true; }
+  });
+  if (f.cargos?.includes('Outros')) document.getElementById('field-outros-desc').style.display = 'block';
+
+  if (f.photoBase64) {
+    currentPhotoBase64 = f.photoBase64;
+    document.getElementById('photo-img').src = f.photoBase64;
+    document.getElementById('photo-placeholder').style.display = 'none';
+    document.getElementById('photo-preview').style.display = 'block';
+  } else if (f.photoURL) {
+    document.getElementById('photo-img').src = f.photoURL;
+    document.getElementById('photo-placeholder').style.display = 'none';
+    document.getElementById('photo-preview').style.display = 'block';
+  }
+
+  switchTab('tab-form');
+}
+
+async function deleteFicha(id) {
+  if (!confirm('Excluir esta ficha?')) return;
+  try {
+    await deleteFromSupabase(id);
+    fichas = fichas.filter(f => f.id !== id);
+    saveLocal();
+    renderFichas();
+    updateStats();
+    closeModal();
+    showToast('🗑 Ficha excluída', 'error');
+  } catch(e) {
+    showToast('Erro ao excluir: ' + e.message, 'error');
+  }
+}
+
+// ══════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === tab));
+  if (tab === 'tab-resumo') updateResumo();
+}
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3500);
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  try { return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR'); } catch(e) { return d; }
+}
+
+function updateStats() {
+  document.getElementById('total-fichas').textContent = fichas.length;
+  updateResumo();
+}
+
+function updateResumo() {
+  const total = fichas.length;
+  document.getElementById('r-total').textContent = total;
+  document.getElementById('r-inclusao').textContent = fichas.filter(f => f.tipo === 'INCLUSÃO').length;
+  document.getElementById('r-exclusao').textContent = fichas.filter(f => f.tipo === 'EXCLUSÃO').length;
+  document.getElementById('r-pendente').textContent = fichas.filter(f => f.aprovado === 'PENDENTE').length;
+
+  const corpo = document.getElementById('resumo-corpo');
+  if (total === 0) {
+    corpo.innerHTML = '<div class="resumo-empty">Nenhuma ficha cadastrada ainda.<br>Vá em <strong>Nova</strong> para começar.</div>';
+    return;
+  }
+
+  const cargoIcons = {
+    'portaria': '🚪', 'parte externa': '🌿', 'auxiliar de r.j.m': '🙏',
+    'auxiliar rjm': '🙏', 'controle do som': '🔊', 'reuniao evang': '📖',
+    'reunião de evangelização': '📖', 'reuniao enfermo': '🏥',
+    'reunião para enfermo': '🏥', 'fundo biblico': '📚',
+    'fundo bíblico': '📚', 'fundo bíblico / distribuição': '📚',
+    'colaborador admin': '🗂️', 'colaborador administração': '🗂️',
+    'colaborador(a) administração': '🗂️', 'colaborador piedade': '💛',
+    'colaborador(a) da piedade': '💛', 'outros': '📌'
+  };
+
+  function getCargoIcon(cargo) {
+    const key = cargo.toLowerCase();
+    for (const [k, v] of Object.entries(cargoIcons)) {
+      if (key.includes(k)) return v;
+    }
+    return '📌';
+  }
+
+  const cargoCounts = {};
+  fichas.forEach(f => {
+    (f.cargos || []).forEach(c => { cargoCounts[c] = (cargoCounts[c] || 0) + 1; });
+  });
+  const sortedCargos = Object.entries(cargoCounts).sort((a,b) => b[1]-a[1]);
+  const maxCargo = sortedCargos[0] ? sortedCargos[0][1] : 1;
+
+  const locCounts = {};
+  fichas.forEach(f => {
+    const loc = f.localidade || 'Não informada';
+    locCounts[loc] = (locCounts[loc] || 0) + 1;
+  });
+  const sortedLocs = Object.entries(locCounts).sort((a,b) => b[1]-a[1]);
+
+  let html = '';
+
+  if (sortedCargos.length > 0) {
+    html += `<div class="resumo-section-title">🏛 Fichas por Cargo</div><div class="cargo-list">`;
+    sortedCargos.forEach(([cargo, count]) => {
+      const pct = Math.round((count / maxCargo) * 100);
+      html += `<div class="cargo-item">
+        <div class="cargo-icon">${getCargoIcon(cargo)}</div>
+        <div class="cargo-name">${cargo}</div>
+        <div class="cargo-bar-wrap"><div class="cargo-bar-bg"><div class="cargo-bar-fill" style="width:${pct}%"></div></div></div>
+        <div class="cargo-count">${count}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (sortedLocs.length > 0) {
+    html += `<div class="resumo-section-title">📍 Fichas por Localidade</div><div class="localidade-list">`;
+    sortedLocs.forEach(([loc, count]) => {
+      html += `<div class="localidade-item"><span class="loc-name">🏠 ${loc}</span><span class="localidade-badge">${count}</span></div>`;
+    });
+    html += `</div>`;
+  }
+
+  const aprovSim = fichas.filter(f => f.aprovado === 'SIM').length;
+  const aprovNao = fichas.filter(f => f.aprovado === 'NÃO').length;
+  const aprovPend = fichas.filter(f => f.aprovado === 'PENDENTE').length;
+
+  html += `<div class="resumo-section-title">✅ Status de Aprovação</div>
+  <div class="aprovacao-list">
+    <div class="aprovacao-item">
+      <div class="cargo-icon">✅</div>
+      <div class="cargo-name">Aprovados</div>
+      <div class="cargo-bar-wrap"><div class="cargo-bar-bg"><div class="cargo-bar-fill" style="width:${total ? Math.round(aprovSim/total*100):0}%;background:linear-gradient(90deg,#27ae60,#2ecc71)"></div></div></div>
+      <div class="cargo-count" style="color:var(--success)">${aprovSim}</div>
+    </div>
+    <div class="aprovacao-item">
+      <div class="cargo-icon">⏳</div>
+      <div class="cargo-name">Pendentes</div>
+      <div class="cargo-bar-wrap"><div class="cargo-bar-bg"><div class="cargo-bar-fill" style="width:${total ? Math.round(aprovPend/total*100):0}%;background:linear-gradient(90deg,#e67e22,#f39c12)"></div></div></div>
+      <div class="cargo-count" style="color:#e67e22">${aprovPend}</div>
+    </div>
+    <div class="aprovacao-item">
+      <div class="cargo-icon">❌</div>
+      <div class="cargo-name">Não aprovados</div>
+      <div class="cargo-bar-wrap"><div class="cargo-bar-bg"><div class="cargo-bar-fill" style="width:${total ? Math.round(aprovNao/total*100):0}%;background:linear-gradient(90deg,#c0392b,#e74c3c)"></div></div></div>
+      <div class="cargo-count" style="color:var(--danger)">${aprovNao}</div>
+    </div>
+  </div>`;
+
+  const semFoto = fichas.filter(f => !f.photoBase64 && !f.photoURL);
+  if (semFoto.length > 0) {
+    html += `<div class="resumo-section-title" style="margin-top:16px">📷 Fichas sem foto <span style="background:#e67e22;color:white;border-radius:20px;padding:2px 10px;font-size:12px;margin-left:6px">${semFoto.length}</span></div>
+    <div style="display:flex;flex-direction:column;gap:8px;">`;
+    semFoto.forEach(f => {
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--white);border:1.5px solid #f39c12;border-radius:var(--radius-sm);padding:10px 14px;cursor:pointer" onclick="editFichaFromResumo('${f.id}')">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));border-radius:50%;color:white;font-size:15px;width:36px;height:36px;line-height:36px;text-align:center;flex-shrink:0">${(f.nome||'?').charAt(0).toUpperCase()}</div>
+          <div>
+            <div style="font-weight:700;font-size:14px;color:var(--primary)">${f.nome||'Sem nome'}</div>
+            <div style="font-size:11px;color:var(--gray-400)">${f.localidade||'—'} • ${f.cargos?.slice(0,1).join(', ')||'Sem cargo'}</div>
+          </div>
+        </div>
+        <span style="font-size:12px;font-weight:700;color:#e67e22;white-space:nowrap">📷 Adicionar</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `<div style="height:20px"></div>`;
+  corpo.innerHTML = html;
+}
+
+function editFichaFromResumo(id) {
+  editFicha(id);
+  setTimeout(() => {
+    const photoArea = document.getElementById('photo-placeholder');
+    if (photoArea) photoArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 300);
+}
+
+// ══════════════════════════════════════════════
+// INICIALIZAÇÃO
+// ══════════════════════════════════════════════
+window.addEventListener('load', async () => {
+  // Carrega backup local enquanto o Supabase não responde
+  loadLocal();
+  loadIgrejas();
+  renderFichas();
+  updateStats();
+  renderIgrejas();
+  atualizarDatalistIgrejas();
+
+  // 1. Inicializa Supabase e liga o listener em tempo real
+  const sbOk = initSupabase();
+  if (sbOk) {
+    // Carrega fichas imediatamente
+    loadFromSupabase().then(data => {
+      fichas = data;
+      saveLocal();
+      renderFichas();
+      updateStats();
+    }).catch(err => {
+      console.error('Erro ao carregar fichas:', err);
+      showToast('⚠️ Erro ao carregar fichas do Supabase.', 'error');
+    });
+    setupRealtimeListener();
+  } else {
+    showToast('⚠️ Erro no Supabase. Usando dados locais.', 'error');
+  }
+
+  // Esconde loader
+  setTimeout(() => {
+    document.getElementById('loader').style.opacity = '0';
+    setTimeout(() => document.getElementById('loader').style.display = 'none', 400);
+  }, 1000);
+});
+
+// ══════════════════════════════════════════════
+// EXPORTAR BACKUP (JSON)
+// ══════════════════════════════════════════════
+function exportarBackup() {
+  if (fichas.length === 0) {
+    showToast('Nenhuma ficha para exportar.', 'error');
+    return;
+  }
+  const payload = {
+    versao: '2.0',
+    exportadoEm: new Date().toISOString(),
+    totalFichas: fichas.length,
+    fichas: fichas
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const data = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+  a.href = url;
+  a.download = `ccb-fichas-backup-${data}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`✅ Backup exportado com ${fichas.length} fichas!`, 'success');
+}
+
+// ══════════════════════════════════════════════
+// IMPORTAR BACKUP (JSON → Supabase, substitui tudo)
+// ══════════════════════════════════════════════
+async function importarBackup(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+
+  if (!sbClient) {
+    showToast('Supabase não conectado. Não é possível importar.', 'error');
+    return;
+  }
+
+  let payload;
+  try {
+    const text = await file.text();
+    payload = JSON.parse(text);
+  } catch(err) {
+    showToast('❌ Arquivo inválido. Selecione um JSON exportado por este app.', 'error');
+    return;
+  }
+
+  let fichasParaImportar = [];
+  if (Array.isArray(payload)) {
+    fichasParaImportar = payload;
+  } else if (payload.fichas && Array.isArray(payload.fichas)) {
+    fichasParaImportar = payload.fichas;
+  } else {
+    showToast('❌ Formato de arquivo não reconhecido.', 'error');
+    return;
+  }
+
+  if (fichasParaImportar.length === 0) {
+    showToast('O arquivo não contém fichas.', 'error');
+    return;
+  }
+
+  const confirmar = confirm(
+    `⚠️ ATENÇÃO\n\nEsta ação irá SUBSTITUIR TODAS as fichas atuais no Supabase por ${fichasParaImportar.length} fichas do backup.\n\nDeseja continuar?`
+  );
+  if (!confirmar) return;
+
+  const overlay = document.getElementById('import-modal-overlay');
+  const progressFill = document.getElementById('import-progress-fill');
+  const progressLabel = document.getElementById('import-progress-label');
+  const modalTitle = document.getElementById('import-modal-title');
+  const modalDesc = document.getElementById('import-modal-desc');
+
+  overlay.classList.add('show');
+  modalTitle.textContent = '🗑 Limpando dados anteriores...';
+  modalDesc.textContent = 'Removendo fichas do Supabase antes de importar.';
+  progressFill.style.width = '0%';
+  progressLabel.textContent = '0 de ' + fichasParaImportar.length;
+
+  try {
+    // Passo 1: Remove todas as fichas existentes
+    const { error: delErr } = await sbClient.from('fichas').delete().neq('id', '__none__');
+    if (delErr) throw delErr;
+
+    // Passo 2: Importa em lotes
+    modalTitle.textContent = '⬆️ Importando fichas...';
+    modalDesc.textContent = 'Enviando fichas para o Supabase.';
+
+    let importados = 0;
+    const total = fichasParaImportar.length;
+    const LOTE_MAX = 100; // Supabase recomenda lotes menores
+
+    for (let i = 0; i < total; i += LOTE_MAX) {
+      const slice = fichasParaImportar.slice(i, i + LOTE_MAX).map(ficha => {
+        if (!ficha.id) ficha.id = 'ficha_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        return ficha;
+      });
+      const { error: insErr } = await sbClient.from('fichas').upsert(slice, { onConflict: 'id' });
+      if (insErr) throw insErr;
+      importados += slice.length;
+      const pct = Math.round((importados / total) * 100);
+      progressFill.style.width = pct + '%';
+      progressLabel.textContent = `${importados} de ${total}`;
+    }
+
+    modalTitle.textContent = '✅ Importação concluída!';
+    modalDesc.textContent = `${total} fichas importadas com sucesso.`;
+    progressFill.style.width = '100%';
+    progressFill.style.background = 'linear-gradient(90deg, #27ae60, #2ecc71)';
+
+    setTimeout(() => {
+      overlay.classList.remove('show');
+      progressFill.style.background = '';
+      showToast(`✅ ${total} fichas importadas com sucesso!`, 'success');
+    }, 2000);
+
+  } catch(err) {
+    console.error('Erro na importação:', err);
+    overlay.classList.remove('show');
+    showToast('❌ Erro na importação: ' + err.message, 'error');
+  }
+}
+</script>
+</body>
+</html>
