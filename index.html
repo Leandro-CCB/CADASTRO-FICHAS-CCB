@@ -114,23 +114,29 @@
       position: sticky;
       top: 52px;
       z-index: 99;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
     }
+    .tab-nav::-webkit-scrollbar { display: none; }
 
     .tab-btn {
-      flex: 1;
+      flex: 0 0 auto;
+      min-width: 64px;
       background: none;
       border: none;
       border-bottom: 2px solid transparent;
       color: var(--gray-400);
       cursor: pointer;
       font-family: 'Source Sans 3', sans-serif;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 700;
-      letter-spacing: 0.4px;
-      padding: 9px 6px 8px;
+      letter-spacing: 0.3px;
+      padding: 9px 8px 8px;
       text-align: center;
       text-transform: uppercase;
       transition: all 0.18s;
+      white-space: nowrap;
     }
     .tab-btn.active { border-bottom-color: var(--primary); color: var(--primary); }
     .tab-btn span { display: block; font-size: 16px; margin-bottom: 2px; }
@@ -704,6 +710,8 @@
     <button class="tab-btn active" data-tab="tab-list"><span>📋</span>Fichas</button>
     <button class="tab-btn" data-tab="tab-resumo"><span>📊</span>Resumo</button>
     <button class="tab-btn" data-tab="tab-form"><span>➕</span>Nova</button>
+    <button class="tab-btn" data-tab="tab-musicos"><span>🎸</span>Músicos</button>
+    <button class="tab-btn" data-tab="tab-organistas"><span>🎹</span>Organistas</button>
     <button class="tab-btn" data-tab="tab-config"><span>⚙️</span>Config</button>
   </nav>
 
@@ -912,7 +920,410 @@
       </div>
     </div>
 
-  
+  </div><!-- end tab-config -->
+
+  <!-- TAB: MÚSICOS -->
+  <div class="tab-content" id="tab-musicos">
+    <div style="margin-bottom:12px">
+      <div class="resumo-header" style="margin-bottom:14px;padding:14px 16px;text-align:left;display:flex;align-items:center;gap:12px">
+        <div style="font-size:28px">🎸</div>
+        <div>
+          <div style="font-family:'Merriweather',serif;font-size:15px;font-weight:700;color:white">Pedidos de Avaliação</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px">Comissão Musical – Músicos</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="musico-modal-btn" onclick="openMusicoModal('culto')" style="background:var(--white);border:2px solid var(--primary);border-radius:var(--radius);padding:18px 12px;cursor:pointer;text-align:center;transition:all 0.18s;display:flex;flex-direction:column;align-items:center;gap:8px">
+          <div style="font-size:28px">🎵</div>
+          <div style="font-family:'Source Sans 3',sans-serif;font-size:12px;font-weight:700;color:var(--primary);line-height:1.3">Pedido de Avaliação<br><span style="color:var(--gray-600);font-weight:600">Culto Oficial</span></div>
+          <div style="font-size:10px;color:var(--gray-400);font-weight:600;letter-spacing:0.4px">FORMULÁRIO M02</div>
+        </button>
+        <button class="musico-modal-btn" onclick="openMusicoModal('oficializacao')" style="background:var(--white);border:2px solid var(--accent);border-radius:var(--radius);padding:18px 12px;cursor:pointer;text-align:center;transition:all 0.18s;display:flex;flex-direction:column;align-items:center;gap:8px">
+          <div style="font-size:28px">🏅</div>
+          <div style="font-family:'Source Sans 3',sans-serif;font-size:12px;font-weight:700;color:var(--accent);line-height:1.3">Pedido de Avaliação<br><span style="color:var(--gray-600);font-weight:600">Oficialização</span></div>
+          <div style="font-size:10px;color:var(--gray-400);font-weight:600;letter-spacing:0.4px">FORMULÁRIO M03</div>
+        </button>
+      </div>
+    </div>
+    <div class="form-card">
+      <div class="form-card-header">ℹ️ Informações</div>
+      <div class="form-card-body">
+        <p style="font-size:12px;color:var(--gray-500);line-height:1.6">Selecione o tipo de pedido acima, preencha os dados do irmão músico e tire uma foto do formulário preenchido para salvar em PDF.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: ORGANISTAS -->
+  <div class="tab-content" id="tab-organistas">
+    <div style="margin-bottom:12px">
+      <div class="resumo-header" style="margin-bottom:14px;padding:14px 16px;text-align:left;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5)">
+        <div style="font-size:28px">🎹</div>
+        <div>
+          <div style="font-family:'Merriweather',serif;font-size:15px;font-weight:700;color:white">Pedidos de Avaliação</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px">Comissão Musical – Organistas</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button onclick="openOrganistaModal('pre')" style="background:var(--white);border:2px solid #7c3aed;border-radius:var(--radius);padding:18px 12px;cursor:pointer;text-align:center;transition:all 0.18s;display:flex;flex-direction:column;align-items:center;gap:8px">
+          <div style="font-size:28px">📝</div>
+          <div style="font-family:'Source Sans 3',sans-serif;font-size:12px;font-weight:700;color:#7c3aed;line-height:1.3">Pedido de<br><span style="color:var(--gray-600);font-weight:600">Pré-Avaliação</span></div>
+          <div style="font-size:10px;color:var(--gray-400);font-weight:600;letter-spacing:0.4px">FORMULÁRIO M04</div>
+        </button>
+        <button onclick="openOrganistaModal('avaliacao')" style="background:var(--white);border:2px solid #4f46e5;border-radius:var(--radius);padding:18px 12px;cursor:pointer;text-align:center;transition:all 0.18s;display:flex;flex-direction:column;align-items:center;gap:8px">
+          <div style="font-size:28px">🎼</div>
+          <div style="font-family:'Source Sans 3',sans-serif;font-size:12px;font-weight:700;color:#4f46e5;line-height:1.3">Pedido de<br><span style="color:var(--gray-600);font-weight:600">Avaliação</span></div>
+          <div style="font-size:10px;color:var(--gray-400);font-weight:600;letter-spacing:0.4px">FORMULÁRIO M05</div>
+        </button>
+      </div>
+    </div>
+    <div class="form-card">
+      <div class="form-card-header">ℹ️ Informações</div>
+      <div class="form-card-body">
+        <p style="font-size:12px;color:var(--gray-500);line-height:1.6">Selecione o tipo de pedido acima, preencha os dados da irmã organista e tire uma foto do formulário preenchido para salvar em PDF.</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end #app -->
+
+<!-- ══ MODAL: MÚSICO CULTO OFICIAL (M02) ══ -->
+<div class="modal-overlay" id="modal-musico-culto">
+  <div class="modal-sheet" style="max-height:95vh">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2>🎵 Avaliação – Culto Oficial</h2>
+      <button class="modal-close" onclick="closeMusicoModal('culto')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--primary-light);border:1px solid var(--primary);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--primary);font-weight:600">📄 Formulário M02 – Comissão Musical</div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">👤 Identificação do Músico</div>
+        <div class="form-card-body">
+          <div class="field">
+            <label>Nome Completo (sem abreviações) *</label>
+            <input type="text" id="mc-nome" placeholder="Nome completo do irmão" />
+          </div>
+          <div class="field">
+            <label>Comum Congregação</label>
+            <input type="text" id="mc-congregacao" placeholder="Nome da congregação" />
+          </div>
+          <div class="field">
+            <label>Instrumento e Tonalidade</label>
+            <input type="text" id="mc-instrumento" placeholder="Ex: Violão – Dó maior" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">📅 Data do Pedido</div>
+        <div class="form-card-body">
+          <div class="field-row">
+            <div class="field">
+              <label>Localidade</label>
+              <input type="text" id="mc-localidade" placeholder="Cidade / Localidade" />
+            </div>
+            <div class="field">
+              <label>Data</label>
+              <input type="date" id="mc-data" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">📷 Foto do Formulário Preenchido</div>
+        <div class="form-card-body">
+          <div class="photo-area" onclick="document.getElementById('mc-photo-input').click()">
+            <div class="photo-placeholder" id="mc-photo-placeholder">
+              <span class="camera-icon">📷</span>
+              <p>Toque aqui para <strong>tirar foto</strong> ou <strong>selecionar</strong> o formulário preenchido</p>
+            </div>
+            <div class="photo-preview" id="mc-photo-preview">
+              <img id="mc-photo-img" src="" alt="Foto do formulário" />
+              <button class="photo-remove" onclick="removeMusicoPhoto('culto', event)">✕</button>
+            </div>
+          </div>
+          <input type="file" id="mc-photo-input" accept="image/*" capture="environment" onchange="handleMusicoPhoto('culto', event)" style="display:none" />
+          <p class="text-xs mt-8">📋 A foto será salva como PDF</p>
+        </div>
+      </div>
+
+      <button class="btn-submit" onclick="salvarMusicoForm('culto')">💾 Salvar Pedido (M02)</button>
+      <button class="btn-secondary" onclick="closeMusicoModal('culto')">Cancelar</button>
+      <div style="height:20px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: MÚSICO OFICIALIZAÇÃO (M03) ══ -->
+<div class="modal-overlay" id="modal-musico-oficializacao">
+  <div class="modal-sheet" style="max-height:95vh">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2>🏅 Avaliação – Oficialização</h2>
+      <button class="modal-close" onclick="closeMusicoModal('oficializacao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#f5f3ff;border:1px solid var(--accent);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--accent);font-weight:600">📄 Formulário M03 – Comissão Musical</div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">👤 Identificação do Músico</div>
+        <div class="form-card-body">
+          <div class="field">
+            <label>Nome Completo (sem abreviações) *</label>
+            <input type="text" id="mo-nome" placeholder="Nome completo do irmão" />
+          </div>
+          <div class="field">
+            <label>Comum Congregação</label>
+            <input type="text" id="mo-congregacao" placeholder="Nome da congregação" />
+          </div>
+          <div class="field">
+            <label>Instrumento e Tonalidade</label>
+            <input type="text" id="mo-instrumento" placeholder="Ex: Violão – Dó maior" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">📅 Data do Pedido</div>
+        <div class="form-card-body">
+          <div class="field-row">
+            <div class="field">
+              <label>Localidade</label>
+              <input type="text" id="mo-localidade" placeholder="Cidade / Localidade" />
+            </div>
+            <div class="field">
+              <label>Data</label>
+              <input type="date" id="mo-data" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">📷 Foto do Formulário Preenchido</div>
+        <div class="form-card-body">
+          <div class="photo-area" onclick="document.getElementById('mo-photo-input').click()">
+            <div class="photo-placeholder" id="mo-photo-placeholder">
+              <span class="camera-icon">📷</span>
+              <p>Toque aqui para <strong>tirar foto</strong> ou <strong>selecionar</strong> o formulário preenchido</p>
+            </div>
+            <div class="photo-preview" id="mo-photo-preview">
+              <img id="mo-photo-img" src="" alt="Foto do formulário" />
+              <button class="photo-remove" onclick="removeMusicoPhoto('oficializacao', event)">✕</button>
+            </div>
+          </div>
+          <input type="file" id="mo-photo-input" accept="image/*" capture="environment" onchange="handleMusicoPhoto('oficializacao', event)" style="display:none" />
+          <p class="text-xs mt-8">📋 A foto será salva como PDF</p>
+        </div>
+      </div>
+
+      <button class="btn-submit" onclick="salvarMusicoForm('oficializacao')">💾 Salvar Pedido (M03)</button>
+      <button class="btn-secondary" onclick="closeMusicoModal('oficializacao')">Cancelar</button>
+      <div style="height:20px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: ORGANISTA PRÉ-AVALIAÇÃO (M04) ══ -->
+<div class="modal-overlay" id="modal-organista-pre">
+  <div class="modal-sheet" style="max-height:95vh">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2>📝 Pré-Avaliação de Organista</h2>
+      <button class="modal-close" onclick="closeOrganistaModal('pre')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#f5f3ff;border:1px solid #7c3aed;border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:11px;color:#7c3aed;font-weight:600">📄 Formulário M04 – Comissão Musical</div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">📅 Data e Tipo</div>
+        <div class="form-card-body">
+          <div class="field-row">
+            <div class="field">
+              <label>Localidade</label>
+              <input type="text" id="op-localidade" placeholder="Cidade / Localidade" />
+            </div>
+            <div class="field">
+              <label>Data</label>
+              <input type="date" id="op-data" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Avaliação para</label>
+            <div class="checkbox-group">
+              <label class="checkbox-item"><input type="checkbox" id="op-tipo-rjm" /><span>Reunião de Jovens</span></label>
+              <label class="checkbox-item"><input type="checkbox" id="op-tipo-culto" /><span>Culto Oficial</span></label>
+              <label class="checkbox-item"><input type="checkbox" id="op-tipo-ofic" /><span>Oficialização</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">👤 Identificação da Organista</div>
+        <div class="form-card-body">
+          <div class="field">
+            <label>Nome Completo (sem abreviações) *</label>
+            <input type="text" id="op-nome" placeholder="Nome completo da irmã" />
+          </div>
+          <div class="field">
+            <label>Comum Congregação</label>
+            <input type="text" id="op-congregacao" placeholder="Nome da congregação" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">🏛 Informações da Localidade</div>
+        <div class="form-card-body">
+          <div class="field-row-3">
+            <div class="field">
+              <label>Cultos/semana</label>
+              <input type="number" id="op-cultos-semana" placeholder="0" min="0" />
+            </div>
+            <div class="field">
+              <label>Organistas (Culto)</label>
+              <input type="number" id="op-qtd-culto" placeholder="0" min="0" />
+            </div>
+            <div class="field">
+              <label>Organistas (RJM)</label>
+              <input type="number" id="op-qtd-rjm" placeholder="0" min="0" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">📚 Informações dos Estudos</div>
+        <div class="form-card-body">
+          <div class="field">
+            <label>Nome da Professora</label>
+            <input type="text" id="op-professora" placeholder="Nome completo da professora" />
+          </div>
+          <div class="field">
+            <label>Comum Congregação da Professora</label>
+            <input type="text" id="op-congr-prof" placeholder="Congregação da professora" />
+          </div>
+          <div class="field">
+            <label>Métodos Utilizados (somente nomes)</label>
+            <textarea id="op-metodos" placeholder="Ex: Método Fácil, Hanon..." style="min-height:50px"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">📷 Foto do Formulário Preenchido</div>
+        <div class="form-card-body">
+          <div class="photo-area" onclick="document.getElementById('op-photo-input').click()">
+            <div class="photo-placeholder" id="op-photo-placeholder">
+              <span class="camera-icon">📷</span>
+              <p>Toque aqui para <strong>tirar foto</strong> ou <strong>selecionar</strong> o formulário preenchido</p>
+            </div>
+            <div class="photo-preview" id="op-photo-preview">
+              <img id="op-photo-img" src="" alt="Foto do formulário" />
+              <button class="photo-remove" onclick="removeOrganistaPhoto('pre', event)">✕</button>
+            </div>
+          </div>
+          <input type="file" id="op-photo-input" accept="image/*" capture="environment" onchange="handleOrganistaPhoto('pre', event)" style="display:none" />
+          <p class="text-xs mt-8">📋 A foto será salva como PDF</p>
+        </div>
+      </div>
+
+      <button class="btn-submit" onclick="salvarOrganistaForm('pre')">💾 Salvar Pedido (M04)</button>
+      <button class="btn-secondary" onclick="closeOrganistaModal('pre')">Cancelar</button>
+      <div style="height:20px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: ORGANISTA AVALIAÇÃO (M05) ══ -->
+<div class="modal-overlay" id="modal-organista-avaliacao">
+  <div class="modal-sheet" style="max-height:95vh">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2>🎼 Avaliação de Organista</h2>
+      <button class="modal-close" onclick="closeOrganistaModal('avaliacao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#eef2ff;border:1px solid #4f46e5;border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:11px;color:#4f46e5;font-weight:600">📄 Formulário M05 – Comissão Musical</div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">📅 Data e Tipo</div>
+        <div class="form-card-body">
+          <div class="field-row">
+            <div class="field">
+              <label>Localidade</label>
+              <input type="text" id="oa-localidade" placeholder="Cidade / Localidade" />
+            </div>
+            <div class="field">
+              <label>Data</label>
+              <input type="date" id="oa-data" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Avaliação para</label>
+            <div class="checkbox-group">
+              <label class="checkbox-item"><input type="checkbox" id="oa-tipo-rjm" /><span>Reunião de Jovens</span></label>
+              <label class="checkbox-item"><input type="checkbox" id="oa-tipo-culto" /><span>Culto Oficial</span></label>
+              <label class="checkbox-item"><input type="checkbox" id="oa-tipo-ofic" /><span>Oficialização</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">👤 Identificação da Organista</div>
+        <div class="form-card-body">
+          <div class="field">
+            <label>Nome Completo (sem abreviações) *</label>
+            <input type="text" id="oa-nome" placeholder="Nome completo da irmã" />
+          </div>
+          <div class="field">
+            <label>Comum Congregação</label>
+            <input type="text" id="oa-congregacao" placeholder="Nome da congregação" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">👩‍🏫 Professora</div>
+        <div class="form-card-body">
+          <div class="field">
+            <label>Nome Completo da Professora (sem abreviações)</label>
+            <input type="text" id="oa-professora" placeholder="Nome completo da professora" />
+          </div>
+          <div class="field">
+            <label>Comum Congregação da Professora</label>
+            <input type="text" id="oa-congr-prof" placeholder="Congregação da professora" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-bottom:10px">
+        <div class="form-card-header">📷 Foto do Formulário Preenchido</div>
+        <div class="form-card-body">
+          <div class="photo-area" onclick="document.getElementById('oa-photo-input').click()">
+            <div class="photo-placeholder" id="oa-photo-placeholder">
+              <span class="camera-icon">📷</span>
+              <p>Toque aqui para <strong>tirar foto</strong> ou <strong>selecionar</strong> o formulário preenchido</p>
+            </div>
+            <div class="photo-preview" id="oa-photo-preview">
+              <img id="oa-photo-img" src="" alt="Foto do formulário" />
+              <button class="photo-remove" onclick="removeOrganistaPhoto('avaliacao', event)">✕</button>
+            </div>
+          </div>
+          <input type="file" id="oa-photo-input" accept="image/*" capture="environment" onchange="handleOrganistaPhoto('avaliacao', event)" style="display:none" />
+          <p class="text-xs mt-8">📋 A foto será salva como PDF</p>
+        </div>
+      </div>
+
+      <button class="btn-submit" onclick="salvarOrganistaForm('avaliacao')">💾 Salvar Pedido (M05)</button>
+      <button class="btn-secondary" onclick="closeOrganistaModal('avaliacao')">Cancelar</button>
+      <div style="height:20px"></div>
+    </div>
+  </div>
 </div>
 
 <!-- Modal de Progresso de Importação -->
@@ -1446,14 +1857,22 @@ function confirmCrop() {
   out.width = Math.round(cw*os); out.height = Math.round(ch*os);
   out.getContext('2d').drawImage(full, cx, cy, cw, ch, 0, 0, out.width, out.height);
   const result = out.toDataURL('image/jpeg', 0.85);
+  document.getElementById('crop-overlay').classList.remove('show');
+  document.body.style.overflow = '';
+  cropBox = {x:0,y:0,w:0,h:0};
+
+  // If there's a custom callback (for músico/organista modals), use it
+  if (typeof window._cropCallback === 'function') {
+    window._cropCallback(result);
+    return;
+  }
+
+  // Default: ficha principal
   currentPhotoBase64 = result;
   out.toBlob(blob => { currentPhotoFile = blob; }, 'image/jpeg', 0.85);
   document.getElementById('photo-img').src = result;
   document.getElementById('photo-placeholder').style.display = 'none';
   document.getElementById('photo-preview').style.display = 'block';
-  document.getElementById('crop-overlay').classList.remove('show');
-  document.body.style.overflow = '';
-  cropBox = {x:0,y:0,w:0,h:0};
 }
 
 // Drag & resize crop box
@@ -2042,6 +2461,213 @@ async function importarBackup(e) {
     overlay.classList.remove('show');
     showToast('❌ Erro na importação: ' + err.message, 'error');
   }
+}
+</script>
+
+<script>
+// ══════════════════════════════════════════════
+// MÓDULO: MÚSICOS (M02 e M03)
+// ══════════════════════════════════════════════
+let musicoPhotoFiles = { culto: null, oficializacao: null };
+let musicoPhotoBases = { culto: null, oficializacao: null };
+let organistaPhotoFiles = { pre: null, avaliacao: null };
+let organistaPhotoBases = { pre: null, avaliacao: null };
+
+function openMusicoModal(tipo) {
+  const id = tipo === 'culto' ? 'modal-musico-culto' : 'modal-musico-oficializacao';
+  document.getElementById(id).classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeMusicoModal(tipo) {
+  const id = tipo === 'culto' ? 'modal-musico-culto' : 'modal-musico-oficializacao';
+  document.getElementById(id).classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function openOrganistaModal(tipo) {
+  const id = tipo === 'pre' ? 'modal-organista-pre' : 'modal-organista-avaliacao';
+  document.getElementById(id).classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeOrganistaModal(tipo) {
+  const id = tipo === 'pre' ? 'modal-organista-pre' : 'modal-organista-avaliacao';
+  document.getElementById(id).classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+// ── Foto handlers Músico ──
+function handleMusicoPhoto(tipo, e) {
+  const prefix = tipo === 'culto' ? 'mc' : 'mo';
+  const file = e.target.files[0];
+  if (!file) return;
+  musicoPhotoFiles[tipo] = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      musicoCropState = { tipo, prefix, img, rotation: 0 };
+      openMusicoCropEditor(tipo, img, prefix);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function removeMusicoPhoto(tipo, e) {
+  if (e) e.stopPropagation();
+  const prefix = tipo === 'culto' ? 'mc' : 'mo';
+  musicoPhotoFiles[tipo] = null;
+  musicoPhotoBases[tipo] = null;
+  document.getElementById(prefix + '-photo-preview').style.display = 'none';
+  document.getElementById(prefix + '-photo-placeholder').style.display = 'flex';
+  document.getElementById(prefix + '-photo-img').src = '';
+}
+
+// ── Crop simplificado para músicos/organistas (usa o mesmo sistema do app) ──
+let musicoCropState = null;
+let organistaCropState = null;
+
+function openMusicoCropEditor(tipo, img, prefix) {
+  // Reutiliza o crop editor global mas com callback específico
+  cropOrigImg = img;
+  cropRotation = 0;
+  cropBox = {x:0,y:0,w:0,h:0};
+  window._cropCallback = (base64DataUrl) => {
+    musicoPhotoBases[tipo] = base64DataUrl;
+    const imgEl = document.getElementById(prefix + '-photo-img');
+    imgEl.src = base64DataUrl;
+    document.getElementById(prefix + '-photo-placeholder').style.display = 'none';
+    document.getElementById(prefix + '-photo-preview').style.display = 'block';
+    window._cropCallback = null;
+  };
+  document.getElementById('crop-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  setTimeout(drawCropCanvas, 60);
+}
+
+function openOrganistaCropEditor(tipo, img, prefix) {
+  cropOrigImg = img;
+  cropRotation = 0;
+  cropBox = {x:0,y:0,w:0,h:0};
+  window._cropCallback = (base64DataUrl) => {
+    organistaPhotoBases[tipo] = base64DataUrl;
+    const imgEl = document.getElementById(prefix + '-photo-img');
+    imgEl.src = base64DataUrl;
+    document.getElementById(prefix + '-photo-placeholder').style.display = 'none';
+    document.getElementById(prefix + '-photo-preview').style.display = 'block';
+    window._cropCallback = null;
+  };
+  document.getElementById('crop-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  setTimeout(drawCropCanvas, 60);
+}
+
+// ── Foto handlers Organista ──
+function handleOrganistaPhoto(tipo, e) {
+  const prefix = tipo === 'pre' ? 'op' : 'oa';
+  const file = e.target.files[0];
+  if (!file) return;
+  organistaPhotoFiles[tipo] = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => openOrganistaCropEditor(tipo, img, prefix);
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function removeOrganistaPhoto(tipo, e) {
+  if (e) e.stopPropagation();
+  const prefix = tipo === 'pre' ? 'op' : 'oa';
+  organistaPhotoFiles[tipo] = null;
+  organistaPhotoBases[tipo] = null;
+  document.getElementById(prefix + '-photo-preview').style.display = 'none';
+  document.getElementById(prefix + '-photo-placeholder').style.display = 'flex';
+  document.getElementById(prefix + '-photo-img').src = '';
+}
+
+// ── Salvar formulário Músico e gerar PDF ──
+async function salvarMusicoForm(tipo) {
+  const prefix = tipo === 'culto' ? 'mc' : 'mo';
+  const nome = document.getElementById(prefix + '-nome').value.trim();
+  if (!nome) { showToast('Informe o nome do músico', 'error'); return; }
+
+  const photoBase64 = musicoPhotoBases[tipo];
+  if (!photoBase64) { showToast('Adicione uma foto do formulário para gerar o PDF', 'error'); return; }
+
+  const formulario = tipo === 'culto' ? 'M02' : 'M03';
+  const titulo = tipo === 'culto' ? 'Avaliação – Culto Oficial' : 'Avaliação – Oficialização';
+
+  try {
+    showToast('⏳ Gerando PDF...', '');
+    await gerarEBaixarPdfMusico(nome, formulario, titulo, photoBase64);
+    showToast(`✅ PDF ${formulario} gerado com sucesso!`, 'success');
+    closeMusicoModal(tipo);
+  } catch(err) {
+    showToast('❌ Erro ao gerar PDF: ' + err.message, 'error');
+  }
+}
+
+// ── Salvar formulário Organista e gerar PDF ──
+async function salvarOrganistaForm(tipo) {
+  const prefix = tipo === 'pre' ? 'op' : 'oa';
+  const nome = document.getElementById(prefix + '-nome').value.trim();
+  if (!nome) { showToast('Informe o nome da organista', 'error'); return; }
+
+  const photoBase64 = organistaPhotoBases[tipo];
+  if (!photoBase64) { showToast('Adicione uma foto do formulário para gerar o PDF', 'error'); return; }
+
+  const formulario = tipo === 'pre' ? 'M04' : 'M05';
+  const titulo = tipo === 'pre' ? 'Pré-Avaliação de Organista' : 'Avaliação de Organista';
+
+  try {
+    showToast('⏳ Gerando PDF...', '');
+    await gerarEBaixarPdfMusico(nome, formulario, titulo, photoBase64);
+    showToast(`✅ PDF ${formulario} gerado com sucesso!`, 'success');
+    closeOrganistaModal(tipo);
+  } catch(err) {
+    showToast('❌ Erro ao gerar PDF: ' + err.message, 'error');
+  }
+}
+
+// ── Gera e baixa o PDF a partir do base64 da foto ──
+async function gerarEBaixarPdfMusico(nome, formulario, titulo, base64DataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const { jsPDF } = window.jspdf;
+        let w = img.width, h = img.height;
+        const maxDim = 1200;
+        if (w > maxDim || h > maxDim) {
+          if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const jpegData = canvas.toDataURL('image/jpeg', 0.75);
+
+        const orientation = w >= h ? 'landscape' : 'portrait';
+        const mmW = (w / 96) * 25.4;
+        const mmH = (h / 96) * 25.4;
+        const pdf = new jsPDF({ orientation, unit: 'mm', format: [mmW, mmH], compress: true });
+        pdf.addImage(jpegData, 'JPEG', 0, 0, mmW, mmH, undefined, 'FAST');
+
+        const nomeArq = nome.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,'');
+        const data = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+        pdf.save(`${formulario}-${nomeArq}-${data}.pdf`);
+        resolve();
+      } catch(err) { reject(err); }
+    };
+    img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+    img.src = base64DataUrl;
+  });
 }
 </script>
 </body>
