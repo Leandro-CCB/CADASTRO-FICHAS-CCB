@@ -1396,8 +1396,8 @@ let realtimeChannel = null;
 // ══════════════════════════════════════════════
 // SUPABASE CONFIG
 // ══════════════════════════════════════════════
-const SUPABASE_URL = 'https://vfjgthdzazqtasftzeli.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_1xAN3amllIjiziqGdmhJBA_lxXHZaec';
+const SUPABASE_URL = 'https://fyggsslndwsguavhduly.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_BrjU1nekPGhSgRFoh607XQ_H8G9BetM';
 const STORAGE_BUCKET = 'fichas-fotos'; // nome do bucket no Supabase Storage
 
 // ══════════════════════════════════════════════
@@ -1408,7 +1408,9 @@ function initSupabase() {
     // UMD build expõe createClient diretamente em window.supabase
     const createClient = window.supabase?.createClient || window.supabaseJs?.createClient;
     if (!createClient) throw new Error('SDK Supabase não carregou');
-    sbClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+    sbClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
+      db: { schema: 'fichas' }
+    });
     setSupabaseStatus(true);
     return true;
   } catch(e) {
@@ -1442,10 +1444,14 @@ async function loadFromSupabase() {
   if (!sbClient) throw new Error('Supabase não inicializado');
   const { data, error } = await sbClient
     .from('fichas')
-    .select('*')
-    .order('criadoEm', { ascending: false });
+    .select('*');
   if (error) throw error;
-  return data || [];
+  // Ordena por criadoem decrescente no JS (evita erro 406 com schema customizado)
+  return (data || []).sort((a, b) => {
+    const da = a.criadoem ? new Date(a.criadoem) : 0;
+    const db = b.criadoem ? new Date(b.criadoem) : 0;
+    return db - da;
+  });
 }
 
 // ── Excluir ficha ──
@@ -1457,16 +1463,14 @@ async function deleteFromSupabase(id) {
   if (error) throw error;
 }
 
-// ── Converte imagem para PDF comprimido (menor tamanho possível) ──
-async function imageToPdfBlob(file) {
+// ── Converte imagem para PDF e retorna como base64 string (salvo direto no banco) ──
+async function imageToBase64Pdf(file) {
   return new Promise((resolve, reject) => {
-    // Primeiro comprime a imagem ao máximo
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        // Reduz para no máximo 900px e qualidade 0.55 para menor tamanho
-        const maxDim = 900;
+        const maxDim = 1200; // maior resolução para capturar texto fino
         let w = img.width, h = img.height;
         if (w > maxDim || h > maxDim) {
           if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
@@ -1475,22 +1479,17 @@ async function imageToPdfBlob(file) {
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        const jpegData = canvas.toDataURL('image/jpeg', 0.55); // qualidade baixa = arquivo menor
-
+        const jpegData = canvas.toDataURL('image/jpeg', 0.25); // qualidade baixa — fichas são texto/assinatura, sem foto
         try {
           const { jsPDF } = window.jspdf;
-          // Orientação baseada na proporção da imagem
           const orientation = w >= h ? 'landscape' : 'portrait';
-          // Converte pixels para mm (72 dpi -> 25.4mm/inch)
           const mmW = (w / 96) * 25.4;
           const mmH = (h / 96) * 25.4;
           const pdf = new jsPDF({ orientation, unit: 'mm', format: [mmW, mmH], compress: true });
           pdf.addImage(jpegData, 'JPEG', 0, 0, mmW, mmH, undefined, 'FAST');
-          const pdfBlob = pdf.output('blob');
-          resolve(pdfBlob);
-        } catch(err) {
-          reject(err);
-        }
+          // Retorna data URI base64 para salvar direto na coluna photobase64
+          resolve(pdf.output('datauristring'));
+        } catch(err) { reject(err); }
       };
       img.onerror = reject;
       img.src = e.target.result;
@@ -1500,30 +1499,6 @@ async function imageToPdfBlob(file) {
   });
 }
 
-// ── Upload de foto como PDF no Supabase Storage ──
-async function uploadPhotoSupabase(file, fichaId) {
-  if (!sbClient) return null;
-  try {
-    // Remove arquivo anterior (jpg ou pdf) para evitar duplicatas
-    await sbClient.storage.from(STORAGE_BUCKET).remove([`${fichaId}.jpg`, `${fichaId}.pdf`]).catch(() => {});
-
-    // Gera PDF comprimido a partir da foto
-    const pdfBlob = await imageToPdfBlob(file);
-    const filename = `${fichaId}.pdf`;
-
-    const { error } = await sbClient.storage
-      .from(STORAGE_BUCKET)
-      .upload(filename, pdfBlob, { contentType: 'application/pdf', upsert: true });
-    if (error) throw error;
-
-    const { data } = sbClient.storage.from(STORAGE_BUCKET).getPublicUrl(filename);
-    return data.publicUrl || null;
-  } catch(e) {
-    console.error('Supabase Storage upload error:', e);
-    return null;
-  }
-}
-
 // ── Sincronizar em tempo real (Realtime) ──
 function setupRealtimeListener() {
   if (!sbClient) return;
@@ -1531,7 +1506,7 @@ function setupRealtimeListener() {
     if (realtimeChannel) sbClient.removeChannel(realtimeChannel);
     realtimeChannel = sbClient
       .channel('fichas-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'fichas' }, async () => {
+      .on('postgres_changes', { event: '*', schema: 'fichas', table: 'fichas' }, async () => {
         const data = await loadFromSupabase();
         fichas = data;
         saveLocal();
@@ -1688,23 +1663,23 @@ function getFormData() {
   }).map(id => id.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()));
 
   return {
-    dataReuniao: document.getElementById('f-data-reuniao').value,
+    datareuniao: document.getElementById('f-data-reuniao').value || null,
     aprovado: document.querySelector('input[name="aprovado"]:checked')?.value || 'PENDENTE',
     tipo: document.querySelector('input[name="tipo"]:checked')?.value || 'INCLUSÃO',
     localidade: document.getElementById('f-localidade').value.trim(),
     nome: document.getElementById('f-nome').value.trim(),
     idade: document.getElementById('f-idade').value,
-    tempoBatismo: document.getElementById('f-tempo-batismo').value.trim(),
+    tempobatismo: document.getElementById('f-tempo-batismo').value.trim(),
     endereco: document.getElementById('f-endereco').value.trim(),
     telefone: document.getElementById('f-telefone').value.trim(),
     referencias: document.getElementById('f-referencias').value.trim(),
     obs: document.getElementById('f-obs').value.trim(),
-    outrosDesc: document.getElementById('f-outros-desc').value.trim(),
+    outrosdesc: document.getElementById('f-outros-desc').value.trim(),
     cargos,
-    photoBase64: currentPhotoBase64 || null,
-    photoURL: null,
-    criadoEm: currentEditId
-      ? (fichas.find(f => f.id === currentEditId)?.criadoEm || new Date().toISOString())
+    photobase64: currentPhotoBase64 || null,
+    photourl: null,
+    criadoem: currentEditId
+      ? (fichas.find(f => f.id === currentEditId)?.criadoem || new Date().toISOString())
       : new Date().toISOString(),
   };
 }
@@ -1722,16 +1697,15 @@ async function salvarFicha() {
     const id = currentEditId || 'ficha_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
     data.id = id;
 
-    // 1. Tenta fazer upload da foto no Supabase Storage (como PDF comprimido)
+    // 1. Converte foto para PDF base64 e salva direto no banco
     if (currentPhotoFile) {
       btn.innerHTML = '<span class="spinner"></span>Gerando PDF da foto...';
-      const url = await uploadPhotoSupabase(currentPhotoFile, id);
-      if (url) {
-        data.photoURL = url;
-        data.photoBase64 = null; // não salva base64 se tem URL
-        data.photoIsPdf = true;  // marca que o arquivo é um PDF
-      } else {
-        showToast('⚠️ Falha no upload da foto. Foto salva localmente.', '');
+      try {
+        data.photobase64 = await imageToBase64Pdf(currentPhotoFile);
+        data.photourl = null;
+      } catch(e) {
+        console.warn('Erro ao gerar PDF, salvando imagem diretamente:', e);
+        // fallback: salva a imagem base64 original que já está em currentPhotoBase64
       }
     }
 
@@ -1856,7 +1830,7 @@ function confirmCrop() {
   const os = Math.min(maxOut/cw, maxOut/ch, 1);
   out.width = Math.round(cw*os); out.height = Math.round(ch*os);
   out.getContext('2d').drawImage(full, cx, cy, cw, ch, 0, 0, out.width, out.height);
-  const result = out.toDataURL('image/jpeg', 0.85);
+  const result = out.toDataURL('image/jpeg', 0.5);
   document.getElementById('crop-overlay').classList.remove('show');
   document.body.style.overflow = '';
   cropBox = {x:0,y:0,w:0,h:0};
@@ -1869,7 +1843,7 @@ function confirmCrop() {
 
   // Default: ficha principal
   currentPhotoBase64 = result;
-  out.toBlob(blob => { currentPhotoFile = blob; }, 'image/jpeg', 0.85);
+  out.toBlob(blob => { currentPhotoFile = blob; }, 'image/jpeg', 0.5);
   document.getElementById('photo-img').src = result;
   document.getElementById('photo-placeholder').style.display = 'none';
   document.getElementById('photo-preview').style.display = 'block';
@@ -1989,19 +1963,19 @@ function openDetail(id) {
   const f = fichas.find(x => x.id === id);
   if (!f) return;
   document.getElementById('modal-title').textContent = f.nome || 'Ficha';
-  const photoHTML = f.photoURL
-    ? (f.photoIsPdf
-        ? `<div style="display:flex;align-items:center;gap:10px;background:#f0f4ff;border:1.5px solid var(--primary);border-radius:var(--radius-sm);padding:12px 16px">
-            <span style="font-size:24px">📄</span>
-            <div>
-              <div style="font-size:13px;font-weight:700;color:var(--primary)">Foto salva como PDF</div>
-              <a href="${f.photoURL}" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">🔗 Abrir / Baixar PDF</a>
-            </div>
-           </div>`
-        : `<img src="${f.photoURL}" class="modal-photo" alt="Foto da ficha" onclick="openLightbox('${f.photoURL}')" onerror="this.outerHTML='<a href=\\'${f.photoURL}\\' target=\\'_blank\\' style=\\'color:var(--primary);font-weight:600;font-size:13px\\'>🔗 Abrir foto</a>'" />`)
-    : f.photoBase64
-    ? `<img src="${f.photoBase64}" class="modal-photo" alt="Foto da ficha" onclick="openLightbox('${f.photoBase64}')" />`
-    : '<p style="color:var(--gray-400);font-size:13px">Sem foto</p>';
+  const _photo = f.photobase64 || f.photourl || null;
+  const _isPdf = _photo && (_photo.startsWith('data:application/pdf') || (f.photourl && f.photourl.endsWith('.pdf')));
+  const photoHTML = !_photo
+    ? '<p style="color:var(--gray-400);font-size:13px">Sem foto</p>'
+    : _isPdf
+      ? `<div style="display:flex;align-items:center;gap:10px;background:#f0f4ff;border:1.5px solid var(--primary);border-radius:var(--radius-sm);padding:12px 16px">
+          <span style="font-size:24px">📄</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--primary)">Foto salva como PDF</div>
+            <a href="${_photo}" download="ficha-${f.id}.pdf" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">⬇️ Baixar PDF</a>
+          </div>
+         </div>`
+      : `<img src="${_photo}" class="modal-photo" alt="Foto da ficha" onclick="openLightbox('${_photo}')" onerror="this.style.display='none'" />`;
 
   document.getElementById('modal-body').innerHTML = `
     <div class="detail-row">
@@ -2016,14 +1990,14 @@ function openDetail(id) {
       <span class="detail-label">Aprovado</span>
       <span class="detail-value">${f.aprovado || '—'}</span>
     </div>
-    ${f.dataReuniao ? `<div class="detail-row"><span class="detail-label">Reunião Ministerial</span><span class="detail-value">${formatDate(f.dataReuniao)}</span></div>` : ''}
+    ${f.datareuniao ? `<div class="detail-row"><span class="detail-label">Reunião Ministerial</span><span class="detail-value">${formatDate(f.datareuniao)}</span></div>` : ''}
     <div class="detail-row">
       <span class="detail-label">Localidade</span>
       <span class="detail-value">${f.localidade || '—'}</span>
     </div>
     <div class="detail-row">
       <span class="detail-label">Idade / Batismo</span>
-      <span class="detail-value">${f.idade ? f.idade + ' anos' : '—'} / ${f.tempoBatismo || '—'}</span>
+      <span class="detail-value">${f.idade ? f.idade + ' anos' : '—'} / ${f.tempobatismo || '—'}</span>
     </div>
     <div class="detail-row">
       <span class="detail-label">Endereço</span>
@@ -2042,7 +2016,7 @@ function openDetail(id) {
       <span class="detail-label">Cargos / Funções</span>
       <div class="detail-tags">${f.cargos.map(c=>`<span class="detail-tag">${c}</span>`).join('')}</div>
     </div>` : ''}
-    ${f.outrosDesc ? `<div class="detail-row"><span class="detail-label">Outros</span><span class="detail-value">${f.outrosDesc}</span></div>` : ''}
+    ${f.outrosdesc ? `<div class="detail-row"><span class="detail-label">Outros</span><span class="detail-value">${f.outrosdesc}</span></div>` : ''}
     ${f.obs ? `<div class="detail-row"><span class="detail-label">Obs</span><span class="detail-value">${f.obs}</span></div>` : ''}
     <div class="detail-row">
       <span class="detail-label">Foto da Ficha</span>
@@ -2083,7 +2057,7 @@ function editFicha(id) {
   closeModal();
   currentEditId = id;
 
-  document.getElementById('f-data-reuniao').value = f.dataReuniao || '';
+  document.getElementById('f-data-reuniao').value = f.datareuniao || '';
   const r = document.querySelector(`input[name="aprovado"][value="${f.aprovado}"]`);
   if (r) r.checked = true;
   const t = document.querySelector(`input[name="tipo"][value="${f.tipo}"]`);
@@ -2091,12 +2065,12 @@ function editFicha(id) {
   document.getElementById('f-localidade').value = f.localidade || '';
   document.getElementById('f-nome').value = f.nome || '';
   document.getElementById('f-idade').value = f.idade || '';
-  document.getElementById('f-tempo-batismo').value = f.tempoBatismo || '';
+  document.getElementById('f-tempo-batismo').value = f.tempobatismo || '';
   document.getElementById('f-endereco').value = f.endereco || '';
   document.getElementById('f-telefone').value = f.telefone || '';
   document.getElementById('f-referencias').value = f.referencias || '';
   document.getElementById('f-obs').value = f.obs || '';
-  document.getElementById('f-outros-desc').value = f.outrosDesc || '';
+  document.getElementById('f-outros-desc').value = f.outrosdesc || '';
 
   const map = {
     'Portaria': 'cb-portaria', 'Parte Externa': 'cb-parte-externa',
@@ -2111,13 +2085,13 @@ function editFicha(id) {
   });
   if (f.cargos?.includes('Outros')) document.getElementById('field-outros-desc').style.display = 'block';
 
-  if (f.photoBase64) {
-    currentPhotoBase64 = f.photoBase64;
-    document.getElementById('photo-img').src = f.photoBase64;
+  if (f.photobase64) {
+    currentPhotoBase64 = f.photobase64;
+    document.getElementById('photo-img').src = f.photobase64;
     document.getElementById('photo-placeholder').style.display = 'none';
     document.getElementById('photo-preview').style.display = 'block';
-  } else if (f.photoURL) {
-    document.getElementById('photo-img').src = f.photoURL;
+  } else if (f.photourl) {
+    document.getElementById('photo-img').src = f.photourl;
     document.getElementById('photo-placeholder').style.display = 'none';
     document.getElementById('photo-preview').style.display = 'block';
   }
@@ -2269,7 +2243,7 @@ function updateResumo() {
     </div>
   </div>`;
 
-  const semFoto = fichas.filter(f => !f.photoBase64 && !f.photoURL);
+  const semFoto = fichas.filter(f => !f.photobase64 && !f.photourl);
   if (semFoto.length > 0) {
     html += `<div class="resumo-section-title" style="margin-top:16px">📷 Fichas sem foto <span style="background:#e67e22;color:white;border-radius:20px;padding:2px 10px;font-size:12px;margin-left:6px">${semFoto.length}</span></div>
     <div style="display:flex;flex-direction:column;gap:8px;">`;
@@ -2432,11 +2406,34 @@ async function importarBackup(e) {
     const total = fichasParaImportar.length;
     const LOTE_MAX = 100; // Supabase recomenda lotes menores
 
+    // Função que normaliza os nomes dos campos (camelCase -> lowercase)
+    // para compatibilidade com backups antigos
+    const normalizar = (ficha) => {
+      if (!ficha.id) ficha.id = 'ficha_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+      return {
+        id:            ficha.id,
+        nome:          ficha.nome || null,
+        idade:         ficha.idade || null,
+        tempobatismo:  ficha.tempobatismo || ficha.tempoBatismo || null,
+        endereco:      ficha.endereco || null,
+        telefone:      ficha.telefone || null,
+        referencias:   ficha.referencias || null,
+        obs:           ficha.obs || null,
+        localidade:    ficha.localidade || null,
+        cargos:        ficha.cargos || null,
+        outrosdesc:    ficha.outrosdesc || ficha.outrosDesc || null,
+        datareuniao:   ficha.datareuniao || ficha.dataReuniao || null,
+        aprovado:      ficha.aprovado || null,
+        tipo:          ficha.tipo || null,
+        photobase64:   ficha.photobase64 || ficha.photoBase64 || null,
+        photourl:      ficha.photourl || ficha.photoURL || null,
+        criadoem:      ficha.criadoem || ficha.criadoEm || new Date().toISOString(),
+        atualizadoem:  ficha.atualizadoem || ficha.atualizadoEm || new Date().toISOString(),
+      };
+    };
+
     for (let i = 0; i < total; i += LOTE_MAX) {
-      const slice = fichasParaImportar.slice(i, i + LOTE_MAX).map(ficha => {
-        if (!ficha.id) ficha.id = 'ficha_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-        return ficha;
-      });
+      const slice = fichasParaImportar.slice(i, i + LOTE_MAX).map(normalizar);
       const { error: insErr } = await sbClient.from('fichas').upsert(slice, { onConflict: 'id' });
       if (insErr) throw insErr;
       importados += slice.length;
@@ -2450,10 +2447,18 @@ async function importarBackup(e) {
     progressFill.style.width = '100%';
     progressFill.style.background = 'linear-gradient(90deg, #27ae60, #2ecc71)';
 
-    setTimeout(() => {
+    setTimeout(async () => {
       overlay.classList.remove('show');
       progressFill.style.background = '';
       showToast(`✅ ${total} fichas importadas com sucesso!`, 'success');
+      // Recarrega as fichas do Supabase e atualiza a tela
+      try {
+        fichas = await loadFromSupabase();
+        saveLocal();
+        renderFichas();
+        updateStats();
+        switchTab('tab-list');
+      } catch(e) { console.error('Erro ao recarregar fichas:', e); }
     }, 2000);
 
   } catch(err) {
@@ -2597,15 +2602,15 @@ async function salvarMusicoForm(tipo) {
   const nome = document.getElementById(prefix + '-nome').value.trim();
   if (!nome) { showToast('Informe o nome do músico', 'error'); return; }
 
-  const photoBase64 = musicoPhotoBases[tipo];
-  if (!photoBase64) { showToast('Adicione uma foto do formulário para gerar o PDF', 'error'); return; }
+  const photobase64 = musicoPhotoBases[tipo];
+  if (!photobase64) { showToast('Adicione uma foto do formulário para gerar o PDF', 'error'); return; }
 
   const formulario = tipo === 'culto' ? 'M02' : 'M03';
   const titulo = tipo === 'culto' ? 'Avaliação – Culto Oficial' : 'Avaliação – Oficialização';
 
   try {
     showToast('⏳ Gerando PDF...', '');
-    await gerarEBaixarPdfMusico(nome, formulario, titulo, photoBase64);
+    await gerarEBaixarPdfMusico(nome, formulario, titulo, photobase64);
     showToast(`✅ PDF ${formulario} gerado com sucesso!`, 'success');
     closeMusicoModal(tipo);
   } catch(err) {
@@ -2619,15 +2624,15 @@ async function salvarOrganistaForm(tipo) {
   const nome = document.getElementById(prefix + '-nome').value.trim();
   if (!nome) { showToast('Informe o nome da organista', 'error'); return; }
 
-  const photoBase64 = organistaPhotoBases[tipo];
-  if (!photoBase64) { showToast('Adicione uma foto do formulário para gerar o PDF', 'error'); return; }
+  const photobase64 = organistaPhotoBases[tipo];
+  if (!photobase64) { showToast('Adicione uma foto do formulário para gerar o PDF', 'error'); return; }
 
   const formulario = tipo === 'pre' ? 'M04' : 'M05';
   const titulo = tipo === 'pre' ? 'Pré-Avaliação de Organista' : 'Avaliação de Organista';
 
   try {
     showToast('⏳ Gerando PDF...', '');
-    await gerarEBaixarPdfMusico(nome, formulario, titulo, photoBase64);
+    await gerarEBaixarPdfMusico(nome, formulario, titulo, photobase64);
     showToast(`✅ PDF ${formulario} gerado com sucesso!`, 'success');
     closeOrganistaModal(tipo);
   } catch(err) {
